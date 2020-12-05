@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="author" content="Victoria de la Garza" />
+    
+    <link rel="shortcut icon" type="image/x-icon" href="../../img/favicon.ico">
+    <title>Project 2: Modeling, Testing, and Predicting</title>
+    <meta name="generator" content="Hugo 0.79.0" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="../../css/main.css" />
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,400,200bold,400old" />
+    
+    <!--[if lt IE 9]>
+			<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+			<script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+		<![endif]-->
+
+    
+  </head>
+
+  <body>
+    <div id="wrap">
+      
+      <nav class="navbar navbar-default">
+  <div class="container">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="../../"><i class="fa fa-home"></i></a>
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+    </div>
+    <div class="navbar-collapse collapse" id="navbar">
+      <ul class="nav navbar-nav navbar-right">
+      
+        
+        <li><a href="../../post/">BLOG</a></li>
+        
+        <li><a href="../../projects/">PROJECTS</a></li>
+        
+        <li><a href="../../resume/">RESUME</a></li>
+        
+      
+      </ul>
+    </div>
+  </div>
+</nav>
+
+      <div class="container">
+        <div class="blog-post">
+          <h3>
+            <strong><a href="../../project/project2/">Project 2: Modeling, Testing, and Predicting</a></strong>
+          </h3>
+        </div>
+ 
+<div class="blog-title">
+          <h4>
+         January 1, 0001 
+            &nbsp;&nbsp;
+            
+          </h4>
+        </div>
+
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <div class="blogpost">
+              
+<link href="../../rmarkdown-libs/anchor-sections/anchor-sections.css" rel="stylesheet" />
+<script src="../../rmarkdown-libs/anchor-sections/anchor-sections.js"></script>
+
+
+<div id="modeling" class="section level2">
+<h2>Modeling</h2>
+<div id="libraries-and-functions" class="section level3">
+<h3>Libraries and Functions</h3>
+<pre class="r"><code>library(survival)
+library(sandwich)
+library(lmtest)
+library(dplyr)
+library(rstatix)
+library(vegan)
+library(plotROC)
+library(glmnet)
+
+## GIVE IT PREDICTED PROBS AND TRUTH LABELS (0/1), RETURNS
+## VARIOUS DIAGNOSTICS
+
+class_diag &lt;- function(probs, truth) {
+    # CONFUSION MATRIX: CALCULATE ACCURACY, TPR, TNR, PPV
+    
+    if (is.character(truth) == TRUE) 
+        truth &lt;- as.factor(truth)
+    if (is.numeric(truth) == FALSE &amp; is.logical(truth) == FALSE) 
+        truth &lt;- as.numeric(truth) - 1
+    
+    tab &lt;- table(factor(probs &gt; 0.5, levels = c(&quot;FALSE&quot;, &quot;TRUE&quot;)), 
+        factor(truth, levels = c(0, 1)))
+    acc = sum(diag(tab))/sum(tab)
+    sens = tab[2, 2]/colSums(tab)[2]
+    spec = tab[1, 1]/colSums(tab)[1]
+    ppv = tab[2, 2]/rowSums(tab)[2]
+    f1 = 2 * (sens * ppv)/(sens + ppv)
+    
+    # CALCULATE EXACT AUC
+    ord &lt;- order(probs, decreasing = TRUE)
+    probs &lt;- probs[ord]
+    truth &lt;- truth[ord]
+    
+    TPR = cumsum(truth)/max(1, sum(truth))
+    FPR = cumsum(!truth)/max(1, sum(!truth))
+    
+    dup &lt;- c(probs[-1] &gt;= probs[-length(probs)], FALSE)
+    TPR &lt;- c(0, TPR[!dup], 1)
+    FPR &lt;- c(0, FPR[!dup], 1)
+    n &lt;- length(TPR)
+    auc &lt;- sum(((TPR[-1] + TPR[-n])/2) * (FPR[-1] - FPR[-n]))
+    
+    data.frame(acc, sens, spec, ppv, f1, auc)
+}</code></pre>
+</div>
+<div id="finding-data" class="section level3">
+<h3>Finding Data</h3>
+<pre class="r"><code>my &lt;- myeloid
+my &lt;- my %&gt;% na.omit()
+head(my)</code></pre>
+<pre><code>##    id trt sex futime death txtime crtime rltime
+## 5   5   B   f    326     1    112     56    200
+## 8   8   A   f    446     1    205     34    382
+## 15 15   A   m    261     1     99     32    154
+## 18 18   A   m    372     1    153     31     88
+## 20 20   B   m   2086     0    185     33     49
+## 23 23   B   f    963     1    101     33    668</code></pre>
+<div id="the-dataset-myeloid-comes-from-the-package-survival.-the-package-survival-has-many-datasets-that-are-about-cancers-and-other-serious-diseases-that-humans-face.-the-dataset-myeloid-is-a-simulated-dataset-based-on-a-trial-in-acute-myeloid-leukemia.-originally-myeloid-has-8-variables-with-646-observations.-after-removing-the-nas-myeloid-contains-8-variables-and-126-observations.-of-the-8-variables-2-are-categorical-trt-sex-one-is-binary-death-and-5-are-numerical-id-futime-txtime-crtime-and-rltime.-the-first-variable-id-is-the-subject-identifier.-the-second-variable-trt-is-a-categorical-variable-containing-the-observations-a-and-b.-the-observation-a-stands-for-treatment-arm-a-likewise-the-observation-b-is-for-treatment-on-arm-b.-the-third-variable-sex-is-also-a-categorical-variable-f-is-observed-when-the-patient-was-female-m-is-observed-when-the-patient-was-male.-the-third-variable-futime-contains-data-on-the-patients-time-to-death-or-time-to-last-follow-up-depending-on-the-binary-variable-death.-the-variable-death-contains-the-observations-0-and-1-1-is-seen-when-the-patient-has-died-and-0-is-placed-for-censoring.-if-a-1-is-observed-that-means-futime-represents-the-patients-time-to-death-if-a-0-is-observed-then-futime-represents-the-patients-time-to-last-follow-up.-the-following-three-variables-are-all-numeric.-the-variable-txtime-represents-the-time-to-hematopoietic-stem-cell-transplant.-the-second-to-last-variable-crtime-represents-the-time-it-took-to-complete-the-response.-the-last-variable-rltime-is-the-time-it-took-to-relapse-from-the-disease." class="section level4">
+<h4>The dataset Myeloid comes from the package survival. The package survival has many datasets that are about cancers and other serious diseases that humans face. The dataset myeloid is a simulated dataset based on a trial in acute myeloid leukemia. Originally, myeloid has 8 variables with 646 observations. After removing the NA's myeloid contains 8 variables and 126 observations. Of the 8 variables 2 are categorical (trt, sex), one is binary (death), and 5 are numerical (id, futime, txtime, crtime, and rltime). The first variable id is the subject identifier. The second variable trt is a categorical variable, containing the observations A and B. The observation A stands for treatment arm A, likewise, the observation B is for treatment on arm B. The third variable sex is also a categorical variable, f is observed when the patient was female, m is observed when the patient was male. The third variable futime contains data on the patient's time to death or time to last follow-up depending on the binary variable death. The variable death contains the observations 0 and 1, 1 is seen when the patient has died, and 0 is placed for censoring. If a 1 is observed that means futime represents the patient's time to death, if a 0 is observed then futime represents the patient's time to last follow up. The following three variables are all numeric. The variable txtime represents the time to hematopoietic stem cell transplant. The second to last variable crtime represents the time it took to complete the response. The last variable rltime is the time it took to relapse from the disease.</h4>
+</div>
+</div>
+<div id="manova" class="section level3">
+<h3>MANOVA</h3>
+<pre class="r"><code>man1 &lt;- manova(cbind(txtime, rltime, futime) ~ trt, data = my)
+summary(man1)</code></pre>
+<pre><code>##            Df   Pillai approx F num Df den Df  Pr(&gt;F)  
+## trt         1 0.062415   2.9291      3    132 0.03609 *
+## Residuals 134                                          
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>summary.aov(man1)</code></pre>
+<pre><code>##  Response txtime :
+##              Df  Sum Sq Mean Sq F value Pr(&gt;F)  
+## trt           1  290571  290571  4.8593 0.0292 *
+## Residuals   134 8012814   59797                 
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+##  Response rltime :
+##              Df  Sum Sq Mean Sq F value  Pr(&gt;F)  
+## trt           1  390922  390922  5.7269 0.01809 *
+## Residuals   134 9146966   68261                  
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+##  Response futime :
+##              Df   Sum Sq Mean Sq F value  Pr(&gt;F)  
+## trt           1  2400624 2400624  5.4587 0.02095 *
+## Residuals   134 58930445  439779                  
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>pairwise.t.test(my$txtime, my$trt, p.adj = &quot;none&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  my$txtime and my$trt 
+## 
+##   A    
+## B 0.029
+## 
+## P value adjustment method: none</code></pre>
+<pre class="r"><code>pairwise.t.test(my$rltime, my$trt, p.adj = &quot;none&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  my$rltime and my$trt 
+## 
+##   A    
+## B 0.018
+## 
+## P value adjustment method: none</code></pre>
+<pre class="r"><code>pairwise.t.test(my$futime, my$trt, p.adj = &quot;none&quot;)</code></pre>
+<pre><code>## 
+##  Pairwise comparisons using t tests with pooled SD 
+## 
+## data:  my$futime and my$trt 
+## 
+##   A    
+## B 0.021
+## 
+## P value adjustment method: none</code></pre>
+<pre class="r"><code>1 + 3 + 3</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre class="r"><code>1 - (0.95^7)  #type 1 error</code></pre>
+<pre><code>## [1] 0.3016627</code></pre>
+<pre class="r"><code>0.05/7  #bonferroni</code></pre>
+<pre><code>## [1] 0.007142857</code></pre>
+<pre class="r"><code># assumptions
+group &lt;- my$trt
+DVs &lt;- my %&gt;% select(txtime, rltime, futime)
+# Test multivariate normality for each group (null:
+# assumption met)
+sapply(split(DVs, group), mshapiro_test)</code></pre>
+<pre><code>##           A            B           
+## statistic 0.8153984    0.6100003   
+## p.value   3.338057e-07 6.697097e-13</code></pre>
+<div id="a-one-way-manova-was-conducted-to-determine-the-effect-of-the-treatment-arm-a-b-on-three-dependent-variables-txtime-rltime-futime.-i-conducted-7-hypothesis-tests-one-manova-3-anvoa-and-3-post-hoc-t-tests-so-the-probability-of-at-least-one-type-1-error-if-left-unadjusted-is-1-.957-0.3017.-after-adjusting-the-significance-level-accordingly-using-bonferroni-correction-the-significance-level-changed-to-a0.057-0.007." class="section level4">
+<h4>A one-way MANOVA was conducted to determine the effect of the treatment arm (A, B) on three dependent variables (txtime, rltime, futime). I conducted 7 hypothesis tests (one MANOVA, 3 ANVOA, and 3 post-hoc t-tests), so the probability of at least one type 1 error if left unadjusted is 1-.95^7= 0.3017. After adjusting the significance level accordingly using Bonferroni correction the significance level changed to a=0.05/7= 0.007.</h4>
+</div>
+<div id="before-adjusting-for-bonferroni-correction-significant-differences-were-found-among-the-two-treatment-arms-for-at-least-one-of-the-dependent-variables-pillai-trace0.062415-pseudo-f31322.929-p0.036.-after-adjusting-there-was-not-a-significant-difference-among-the-two-treatment-arms-for-at-least-one-of-the-dependent-variables." class="section level4">
+<h4>Before adjusting for Bonferroni correction, significant differences were found among the two treatment arms for at least one of the dependent variables, Pillai trace=0.062415, pseudo F(3,132)=2.929, p=0.036. After adjusting there was not a significant difference among the two treatment arms for at least one of the dependent variables.</h4>
+</div>
+<div id="univariate-anovas-for-each-dependent-variable-were-conducted-as-follow-up-tests-to-the-manova-using-the-bonferroni-method-for-controlling-type-i-error-rates-for-multiple-comparisons.-the-univariate-anovas-for-txtime-rltime-and-futime-were-also-significant-before-adjustment-f11344.8593-p0.0292-f1134-5.7269-p0.0181-and-f11345.4587-p0.0201respectively.-similar-to-the-manova-test-after-the-adjustment-the-univariate-anovas-for-txtime-rltime-and-futime-were-not-significant." class="section level4">
+<h4>Univariate ANOVAs for each dependent variable were conducted as follow-up tests to the MANOVA, using the Bonferroni method for controlling Type I error rates for multiple comparisons. The univariate ANOVAs for txtime, rltime, and futime were also significant before adjustment, F(1,134)=4.8593, p=0.0292, F(1,134)= 5.7269, p=0.0181, and F(1,134)=5.4587, p=0.0201,respectively. Similar to the MANOVA test after the adjustment the univariate ANOVAs for txtime, rltime, and futime were not significant.</h4>
+</div>
+<div id="post-hoc-analysis-was-performed-conducting-pairwise-comparisons-to-determine-which-treatment-arm-differed-in-txtime-rltime-and-futime.-both-arms-were-found-to-not-differ-significantly-from-each-other-in-terms-of-txtime-rltime-and-futime-after-adjusting-for-multiple-comparisons-bonferroni-a0.057-0.007." class="section level4">
+<h4>Post hoc analysis was performed conducting pairwise comparisons to determine which treatment arm differed in txtime, rltime, and futime. Both arms were found to not differ significantly from each other in terms of txtime, rltime, and futime after adjusting for multiple comparisons (Bonferroni a=0.05/7= 0.007).</h4>
+</div>
+<div id="after-testing-to-see-if-the-multivariate-normality-for-each-group-was-met-my-p-value-was-p0.05-causing-me-to-reject-the-null-hypothesis-that-all-population-variancescovariances-are-equal-across-groups.-this-means-that-the-manova-assumptions-were-violated-causing-there-to-be-some-limitations-to-the-manova." class="section level4">
+<h4>After testing to see if the multivariate normality for each group was met, my p-value was p&lt;0.05, causing me to reject the null hypothesis that all population variances/covariances are equal across groups. This means that the MANOVA assumptions were violated causing there to be some limitations to the MANOVA.</h4>
+</div>
+</div>
+<div id="randomization-test" class="section level3">
+<h3>Randomization Test</h3>
+<pre class="r"><code>dists &lt;- my %&gt;% select(c(txtime, rltime, futime)) %&gt;% dist()
+adonis(dists ~ trt, data = my, method = &quot;bray&quot;)</code></pre>
+<pre><code>## 
+## Call:
+## adonis(formula = dists ~ trt, data = my, method = &quot;bray&quot;) 
+## 
+## Permutation: free
+## Number of permutations: 999
+## 
+## Terms added sequentially (first to last)
+## 
+##            Df SumsOfSqs MeanSqs F.Model      R2 Pr(&gt;F)  
+## trt         1   3082116 3082116  5.4278 0.03893  0.018 *
+## Residuals 134  76090225  567838         0.96107         
+## Total     135  79172342                 1.00000         
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>SST &lt;- sum(dists^2)/136
+SSW &lt;- my %&gt;% group_by(trt) %&gt;% select(trt, txtime, rltime, futime) %&gt;% 
+    do(d = dist(.[2:3], &quot;euclidean&quot;)) %&gt;% ungroup() %&gt;% summarize(sum(d[[1]]^2)/68 + 
+    sum(d[[2]]^2)/68) %&gt;% pull
+F_obs &lt;- ((SST - SSW)/1)/(SSW/134)
+# compute null distribution
+Fs &lt;- replicate(1000, {
+    new &lt;- my %&gt;% mutate(trt = sample(trt))
+    SSW &lt;- new %&gt;% group_by(trt) %&gt;% select(trt, txtime, rltime, 
+        futime) %&gt;% do(d = dist(.[2:3], &quot;euclidean&quot;)) %&gt;% ungroup() %&gt;% 
+        summarize(sum(d[[1]]^2)/68 + sum(d[[2]]^2)/68) %&gt;% pull
+    ((SST - SSW)/1)/(SSW/134)
+})
+
+hist(Fs, prob = T)
+abline(v = F_obs, col = &quot;red&quot;, add = T)</code></pre>
+<p><img src="../../project/project2_files/figure-html/unnamed-chunk-4-1.png" width="672" style="display: block; margin: auto;" /></p>
+<div id="for-the-randomization-test-i-preformed-a-permanova.-since-my-data-violted-the-manova-assumptions-i-chose-to-do-a-permanova-to-see-if-the-threatment-arm-ab-affects-txtime-rltime-and-futime." class="section level4">
+<h4>For the randomization test I preformed a PERMANOVA. Since my data violted the MANOVA assumptions I chose to do a PERMANOVA to see if the threatment arm (A,B) affects txtime, rltime, and futime.</h4>
+</div>
+<div id="h0for-both-dvs-arm-a-arm-b-times-for-each-arm-are-equal.-there-is-no-difference-between-treatment-arm-and-time-to-hematropetic-stem-cell-transplant-complete-response-and-deathlast-follow-up." class="section level4">
+<h4>H0:For both DVs (arm A, arm B), times for each arm are equal. (There is no difference between treatment arm and time to hematropetic stem cell transplant, complete response, and death/last follow up).</h4>
+</div>
+<div id="hafor-at-least-one-treatment-arm-ab-the-times-are-different.-there-is-a-difference-between-treatment-arm-and-time-to-hematropetic-stem-cell-transplant-complete-response-and-deathlast-follow-up." class="section level4">
+<h4>HA:For at least one treatment arm (A,B) the times are different. (There is a difference between treatment arm and time to hematropetic stem cell transplant, complete response, and death/last follow up).</h4>
+</div>
+<div id="the-p-value-of-the-permanova-is-p0.015-leading-us-to-reject-the-null-hypothesis-and-accept-the-alternative-hypothesis-that-there-is-a-difference-between-treatment-arm-and-time-to-hematropetic-stem-cell-transplant-complete-response-and-deathlast-follow-up." class="section level4">
+<h4>The p-value of the PERMANOVA is p=0.015, leading us to reject the null hypothesis and accept the alternative hypothesis that there is a difference between treatment arm and time to hematropetic stem cell transplant, complete response, and death/last follow up.</h4>
+</div>
+</div>
+<div id="linear-regression-model" class="section level3">
+<h3>Linear Regression Model</h3>
+<pre class="r"><code>my2 &lt;- my
+my2 &lt;- my %&gt;% mutate(death = as.character(my$death))
+my2$futime_c &lt;- my$futime - mean(my$futime)  #mean centering
+my2$crtime_c &lt;- my$crtime - mean(my$crtime)
+my2$rltime_c &lt;- my$rltime - mean(my$rltime)
+fit &lt;- lm(futime_c ~ death + rltime_c + sex + trt + crtime_c + 
+    death:rltime_c, data = my2)
+summary(fit)  #model</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = futime_c ~ death + rltime_c + sex + trt + crtime_c + 
+##     death:rltime_c, data = my2)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -1262.94  -169.57   -55.04   164.73  1103.01 
+## 
+## Coefficients:
+##                   Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)       682.1717    66.6058  10.242  &lt; 2e-16 ***
+## death1          -1022.3226    65.1184 -15.699  &lt; 2e-16 ***
+## rltime_c            0.2562     0.1423   1.801   0.0741 .  
+## sexm              -26.0327    61.3208  -0.425   0.6719    
+## trtB               66.0535    62.0023   1.065   0.2887    
+## crtime_c            0.7011     0.9655   0.726   0.4691    
+## death1:rltime_c     1.1400     0.2493   4.574 1.11e-05 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 345.4 on 129 degrees of freedom
+## Multiple R-squared:  0.7491, Adjusted R-squared:  0.7375 
+## F-statistic: 64.21 on 6 and 129 DF,  p-value: &lt; 2.2e-16</code></pre>
+<pre class="r"><code>my %&gt;% mutate(death = as.character(my$death)) %&gt;% ggplot(aes(x = rltime, 
+    y = futime, group = death)) + geom_point(aes(color = death)) + 
+    geom_smooth(method = &quot;lm&quot;, formula = y ~ 1, se = F, fullrange = T, 
+        aes(color = death)) + xlab(&quot;&quot;)</code></pre>
+<p><img src="../../project/project2_files/figure-html/unnamed-chunk-5-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>resids &lt;- fit$residuals
+fitvals &lt;- fit$fitted.values
+ggplot() + geom_point(aes(fitvals, resids)) + geom_hline(yintercept = 0, 
+    col = &quot;red&quot;)  #linearity</code></pre>
+<p><img src="../../project/project2_files/figure-html/unnamed-chunk-5-2.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ks.test(resids, &quot;pnorm&quot;, mean = 0, sd(resids))  #normality</code></pre>
+<pre><code>## 
+##  One-sample Kolmogorov-Smirnov test
+## 
+## data:  resids
+## D = 0.13776, p-value = 0.01146
+## alternative hypothesis: two-sided</code></pre>
+<pre class="r"><code>bptest(fit)  #homoskedastic</code></pre>
+<pre><code>## 
+##  studentized Breusch-Pagan test
+## 
+## data:  fit
+## BP = 17.641, df = 6, p-value = 0.007195</code></pre>
+<pre class="r"><code>summary(fit)$coef  #uncorrected se</code></pre>
+<pre><code>##                      Estimate Std. Error     t value     Pr(&gt;|t|)
+## (Intercept)       682.1716774 66.6057708  10.2419305 2.222678e-18
+## death1          -1022.3226212 65.1184159 -15.6994394 1.019165e-31
+## rltime_c            0.2562452  0.1422925   1.8008344 7.406523e-02
+## sexm              -26.0326831 61.3207704  -0.4245329 6.718844e-01
+## trtB               66.0535103 62.0023106   1.0653395 2.887123e-01
+## crtime_c            0.7010516  0.9654561   0.7261351 4.690714e-01
+## death1:rltime_c     1.1400286  0.2492509   4.5738191 1.109412e-05</code></pre>
+<pre class="r"><code>coeftest(fit, vcov = vcovHC(fit))  #corrected se</code></pre>
+<pre><code>## 
+## t test of coefficients:
+## 
+##                    Estimate  Std. Error  t value  Pr(&gt;|t|)    
+## (Intercept)       682.17168    86.28793   7.9058 1.036e-12 ***
+## death1          -1022.32262    86.04045 -11.8819 &lt; 2.2e-16 ***
+## rltime_c            0.25625     0.17509   1.4635    0.1458    
+## sexm              -26.03268    62.60505  -0.4158    0.6782    
+## trtB               66.05351    61.29872   1.0776    0.2832    
+## crtime_c            0.70105     0.91771   0.7639    0.4463    
+## death1:rltime_c     1.14003     0.27101   4.2066 4.817e-05 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<div id="a-linear-regression-model-was-used-to-predict-futime-from-death-crtimerltime-treatment-arm-sex-and-from-the-interaction-of-death-and-rltime.-before-performing-the-regression-i-mean-centered-the-numeric-variables-involved-in-the-interaction-and-changed-death-to-a-character-to-see-which-observation-is-used." class="section level4">
+<h4>A linear regression model was used to predict futime from death, crtime,rltime, treatment arm, sex and from the interaction of death and rltime. Before performing the regression I mean-centered the numeric variables involved in the interaction and changed death to a character to see which observation is used.</h4>
+</div>
+<div id="intercept-predicted-futime-for-a-female-patient-who-did-not-die-with-treatment-arm-a-and-an-average-rltime-and-crtime-is-682.17." class="section level4">
+<h4>Intercept: Predicted futime for a female patient who did not die with treatment arm A, and an average rltime and crtime is 682.17.</h4>
+</div>
+<div id="death1-controlling-for-rltime-sex-treatment-arm-and-crtime-futime-in-patients-that-died-is-1022.32-times-lower-than-patients-that-did-not-die-on-average." class="section level4">
+<h4>Death1: Controlling for rltime, sex, treatment arm, and crtime, futime in patients that died is 1022.32 times lower than patients that did not die on average.</h4>
+</div>
+<div id="rltime_c-controlling-for-sex-treatment-arm-and-death-status-for-every-1-unit-increase-in-rltime_c-futime-goes-up-by-0.256-on-average." class="section level4">
+<h4>rltime_c: Controlling for sex, treatment arm, and death status, for every 1 unit increase in rltime_c, futime goes up by 0.256 on average.</h4>
+</div>
+<div id="sexm-controlling-for-death-status-and-treatment-arm-in-patients-with-average-rltime-and-crtime-futime-is-26.03-lower-for-males-compared-to-females." class="section level4">
+<h4>sexm: Controlling for death status and treatment arm, in patients with average rltime and crtime, futime is 26.03 lower for males compared to females.</h4>
+</div>
+<div id="trtb-controlling-for-death-status-and-sex-in-patients-with-average-rltime-and-crtime-futime-is-66.05-higher-for-treatment-arm-a-compared-to-treatment-arm-b." class="section level4">
+<h4>trtB: Controlling for death status and sex, in patients with average rltime and crtime, futime is 66.05 higher for treatment arm A compared to treatment arm B.</h4>
+</div>
+<div id="crtime_c-controlling-for-sex-treatment-arm-and-death-status-for-every-1-unit-increase-in-crtime-futime-goes-up-by-0.70-on-average." class="section level4">
+<h4>crtime_c: Controlling for sex, treatment arm, and death status, for every 1 unit increase in crtime, futime goes up by 0.70 on average.</h4>
+</div>
+<div id="death1rltime_c-controlling-for-sextreatment-arm-and-crtime-the-slope-for-rltime-on-futime-is-1.14-higher-for-people-who-died-compared-to-patients-who-are-still-alvie." class="section level4">
+<h4>death1:rltime_c: Controlling for sex,treatment arm, and crtime, the slope for rltime on futime is 1.14 higher for people who died compared to patients who are still alvie.</h4>
+</div>
+<div id="after-finding-the-coefficient-estimates-i-plotted-the-regression-of-the-interaction.-i-once-again-made-death-a-character-so-that-the-legend-is-two-distinct-colors-and-not-a-gradient.-i-then-checked-the-assumption-of-linearity-by-plotting-residuals-by-fitted-values.-i-then-found-normality-by-using-a-kolmogorov-smirnov-test-and-finally-found-homoskedasticity-by-the-breusch-pagan-test.-on-the-normality-graph-the-data-was-clumped-into-two-groups-showing-that-the-data-is-non-normal.-the-linearity-test-showed-that-the-data-passes-the-linearity-assumption.-the-last-test-the-test-for-homoskedasticity-showed-that-the-data-is-heteroskedastic.-overall-two-out-of-the-three-assumptions-were-violated." class="section level4">
+<h4>After finding the coefficient estimates I plotted the regression of the interaction. I once again made death a character so that the legend is two distinct colors and not a gradient. I then checked the assumption of linearity by plotting residuals by fitted values. I then found normality by using a Kolmogorov-Smirnov test and finally found homoskedasticity by the Breusch-Pagan test. On the normality graph, the data was clumped into two groups, showing that the data is non-normal. The linearity test showed that the data passes the linearity assumption. The last test, the test for homoskedasticity showed that the data is Heteroskedastic. Overall, two out of the three assumptions were violated.</h4>
+<pre class="r"><code>fit &lt;- lm(futime_c ~ death + rltime_c + sex + trt + crtime_c + 
+    death:rltime_c, data = my2)
+summary(fit)  #model</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = futime_c ~ death + rltime_c + sex + trt + crtime_c + 
+##     death:rltime_c, data = my2)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -1262.94  -169.57   -55.04   164.73  1103.01 
+## 
+## Coefficients:
+##                   Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)       682.1717    66.6058  10.242  &lt; 2e-16 ***
+## death1          -1022.3226    65.1184 -15.699  &lt; 2e-16 ***
+## rltime_c            0.2562     0.1423   1.801   0.0741 .  
+## sexm              -26.0327    61.3208  -0.425   0.6719    
+## trtB               66.0535    62.0023   1.065   0.2887    
+## crtime_c            0.7011     0.9655   0.726   0.4691    
+## death1:rltime_c     1.1400     0.2493   4.574 1.11e-05 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 345.4 on 129 degrees of freedom
+## Multiple R-squared:  0.7491, Adjusted R-squared:  0.7375 
+## F-statistic: 64.21 on 6 and 129 DF,  p-value: &lt; 2.2e-16</code></pre>
+<pre class="r"><code># resampling observations
+samp_distn &lt;- replicate(5000, {
+    boot_dat &lt;- boot_dat &lt;- my2[sample(nrow(my2), replace = TRUE), 
+        ]
+    fit &lt;- lm(futime_c ~ death + rltime_c + sex + trt + crtime_c + 
+        death:rltime_c, data = boot_dat)
+    coef(fit)
+})
+coeftest(fit)  #normal Se</code></pre>
+<pre><code>## 
+## t test of coefficients:
+## 
+##                    Estimate  Std. Error  t value  Pr(&gt;|t|)    
+## (Intercept)       682.17168    66.60577  10.2419 &lt; 2.2e-16 ***
+## death1          -1022.32262    65.11842 -15.6994 &lt; 2.2e-16 ***
+## rltime_c            0.25625     0.14229   1.8008   0.07407 .  
+## sexm              -26.03268    61.32077  -0.4245   0.67188    
+## trtB               66.05351    62.00231   1.0653   0.28871    
+## crtime_c            0.70105     0.96546   0.7261   0.46907    
+## death1:rltime_c     1.14003     0.24925   4.5738 1.109e-05 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>coeftest(fit, vcov = vcovHC(fit, type = &quot;HC1&quot;))  #robust Se HC1 because orignal type made std error NAN</code></pre>
+<pre><code>## 
+## t test of coefficients:
+## 
+##                    Estimate  Std. Error  t value  Pr(&gt;|t|)    
+## (Intercept)       682.17168    83.69654   8.1505 2.740e-13 ***
+## death1          -1022.32262    83.44569 -12.2514 &lt; 2.2e-16 ***
+## rltime_c            0.25625     0.16357   1.5665    0.1197    
+## sexm              -26.03268    60.75816  -0.4285    0.6690    
+## trtB               66.05351    59.50470   1.1101    0.2690    
+## crtime_c            0.70105     0.81930   0.8557    0.3938    
+## death1:rltime_c     1.14003     0.25427   4.4835 1.604e-05 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
+<pre class="r"><code>samp_distn %&gt;% t %&gt;% as.data.frame %&gt;% summarize_all(sd)  #boot strapped </code></pre>
+<pre><code>##   (Intercept)   death1  rltime_c     sexm     trtB  crtime_c death1:rltime_c
+## 1    82.49262 82.49826 0.1917552 61.08526 58.34346 0.9633281       0.2759022</code></pre>
+</div>
+<div id="i-then-reran-the-same-regression-model-but-this-time-i-bootstrapped-the-standard-errors-by-resampling-observations.-after-resampling-my-regression-model-there-are-no-changes-between-the-original-ses-and-the-resampled-ses.-unlike-the-resampled-ses-the-robust-and-bootstrapped-ses-did-change.-of-the-robust-ses-sexm-trtb-and-crtime_c-decreased-and-the-rest-of-the-ses-increased.-of-the-bootstrapped-ses-all-but-sex-and-trtb-increased.-the-robust-ses-and-bootstrapped-ses-increase-and-decreased-by-less-than-a-0.5-difference.-the-p-values-from-the-original-resampled-and-robust-models-were-all-similar-with-very-slight-changes.-the-significant-interactions-still-stayed-significant-intercept-death1-and-death1rltime_c-and-the-non-significant-interactions-still-stayed-non-significant-rltime_c-sexm-trtb-and-crtime_c." class="section level4">
+<h4>I then reran the same regression model but this time I bootstrapped the standard errors by resampling observations. After resampling my regression model there are no changes between the original SEs and the resampled SEs. Unlike the resampled SEs, the robust and bootstrapped SEs did change. Of the robust SEs, sexm, trtB, and crtime_c decreased and the rest of the SEs increased. Of the bootstrapped SEs all but sex and trtB increased. The robust SEs and bootstrapped SEs increase and decreased by less than a 0.5 difference. The p-values from the original, resampled, and robust models were all similar with very slight changes. The significant interactions still stayed significant (intercept, death1, and death1:rltime_c), and the non-significant interactions still stayed non-significant (rltime_c, sexm, trtB, and crtime_c).</h4>
+</div>
+</div>
+<div id="logistic-regression-model" class="section level3">
+<h3>Logistic Regression Model</h3>
+<pre class="r"><code>fit &lt;- glm(death ~ rltime + futime, data = my, family = binomial(link = &quot;logit&quot;))
+summary(fit)</code></pre>
+<pre><code>## 
+## Call:
+## glm(formula = death ~ rltime + futime, family = binomial(link = &quot;logit&quot;), 
+##     data = my)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -2.6974  -0.2187   0.1832   0.3479   2.9888  
+## 
+## Coefficients:
+##               Estimate Std. Error z value Pr(&gt;|z|)    
+## (Intercept)  5.3179370  0.8951383   5.941 2.83e-09 ***
+## rltime       0.0015487  0.0011628   1.332    0.183    
+## futime      -0.0047426  0.0007784  -6.093 1.11e-09 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 175.35  on 135  degrees of freedom
+## Residual deviance:  66.92  on 133  degrees of freedom
+## AIC: 72.92
+## 
+## Number of Fisher Scoring iterations: 6</code></pre>
+<pre class="r"><code>exp(coef(fit))</code></pre>
+<pre><code>## (Intercept)      rltime      futime 
+## 203.9626723   1.0015499   0.9952686</code></pre>
+<pre class="r"><code>probs &lt;- predict(fit, type = &quot;response&quot;)
+table(predict = as.numeric(probs &gt; 0.5), truth = my$death) %&gt;% 
+    addmargins()  #confusion matrix</code></pre>
+<pre><code>##        truth
+## predict   0   1 Sum
+##     0    42   4  46
+##     1     5  85  90
+##     Sum  47  89 136</code></pre>
+<pre class="r"><code>(42 + 85)/136  #accuracy</code></pre>
+<pre><code>## [1] 0.9338235</code></pre>
+<pre class="r"><code>85/89  #TPR</code></pre>
+<pre><code>## [1] 0.9550562</code></pre>
+<pre class="r"><code>42/47  #TNR</code></pre>
+<pre><code>## [1] 0.893617</code></pre>
+<pre class="r"><code>85/90  #PPV</code></pre>
+<pre><code>## [1] 0.9444444</code></pre>
+<pre class="r"><code>my2$logit &lt;- predict(fit, type = &quot;link&quot;)
+my2 %&gt;% mutate(death = as.character(my$death)) %&gt;% ggplot() + 
+    geom_density(aes(logit, color = death, fill = death), alpha = 0.4) + 
+    theme(legend.position = c(0.85, 0.85)) + geom_vline(xintercept = 0) + 
+    xlab(&quot;logit (log-odds)&quot;) + geom_rug(aes(logit, color = death))  #density plot</code></pre>
+<p><img src="../../project/project2_files/figure-html/unnamed-chunk-7-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ROCplot &lt;- ggplot(my) + geom_roc(aes(d = death, m = probs), n.cuts = 0)
+ROCplot</code></pre>
+<p><img src="../../project/project2_files/figure-html/unnamed-chunk-7-2.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>calc_auc(ROCplot)  #AUC</code></pre>
+<pre><code>##   PANEL group       AUC
+## 1     1    -1 0.9521874</code></pre>
+<div id="for-my-logistic-regression-model-i-used-death-as-my-binary-variable-rltime-and-futime-were-used-as-the-two-explanatory-variables." class="section level4">
+<h4>For my logistic regression model I used death as my binary variable; rltime and futime were used as the two explanatory variables.</h4>
+</div>
+<div id="intercept-odds-of-death-for-rltime0-futime0-is-203.96." class="section level4">
+<h4>Intercept: Odds of death for rltime=0, futime=0 is 203.96.</h4>
+</div>
+<div id="rltime-controlling-for-futime-for-every-one-unit-increase-of-rltime-odds-of-death-increase-by-1.00-non-significant." class="section level4">
+<h4>rltime: Controlling for futime, for every one unit increase of rltime, odds of death increase by 1.00 (non-significant).</h4>
+</div>
+<div id="futime-controlling-for-rltime-for-every-one-unit-increase-in-futime-odds-of-death-increase-by-0.995-significant." class="section level4">
+<h4>futime: Controlling for rltime, for every one-unit increase in futime, odds of death increase by 0.995 (significant).</h4>
+</div>
+<div id="from-the-confusion-matrix-of-my-logistic-regression-i-was-able-to-compute-the-accuracy-sensitivity-specificity-and-precision-of-the-model.-the-accuracy-of-the-logistic-model-is-9.93-sensitivity0.995-specificity0.894-and-precision-equals-0.944.-the-auc-was-calculated-by-using-the-calc_auc-function.-the-auc-of-the-model-is-reported-to-be-0.95-and-is-considered-a-great-auc." class="section level4">
+<h4>From the confusion matrix of my logistic regression I was able to compute the accuracy, sensitivity, specificity, and precision of the model. The accuracy of the logistic model is 9.93, sensitivity=0.995, specificity=0.894, and precision equals 0.944. The AUC was calculated by using the calc_auc function. The AUC of the model is reported to be 0.95 and is considered a great AUC.</h4>
+<pre class="r"><code>fit &lt;- glm(death ~ ., data = my, family = binomial(link = &quot;logit&quot;))
+summary(fit)</code></pre>
+<pre><code>## 
+## Call:
+## glm(formula = death ~ ., family = binomial(link = &quot;logit&quot;), data = my)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -2.4519  -0.1792   0.1746   0.3454   2.8374  
+## 
+## Coefficients:
+##               Estimate Std. Error z value Pr(&gt;|z|)    
+## (Intercept)  5.6182161  1.3695862   4.102 4.09e-05 ***
+## id          -0.0026272  0.0020796  -1.263    0.206    
+## trtB         0.0316025  0.7071064   0.045    0.964    
+## sexm         0.0920062  0.7202789   0.128    0.898    
+## futime      -0.0050317  0.0008461  -5.947 2.73e-09 ***
+## txtime       0.0023056  0.0014851   1.552    0.121    
+## crtime       0.0087322  0.0100648   0.868    0.386    
+## rltime       0.0003603  0.0015592   0.231    0.817    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 175.351  on 135  degrees of freedom
+## Residual deviance:  63.331  on 128  degrees of freedom
+## AIC: 79.331
+## 
+## Number of Fisher Scoring iterations: 6</code></pre>
+<pre class="r"><code>probs &lt;- predict(fit, type = &quot;response&quot;)
+table(predict = as.numeric(probs &gt; 0.5), truth = my$death) %&gt;% 
+    addmargins()  #confusion matrix</code></pre>
+<pre><code>##        truth
+## predict   0   1 Sum
+##     0    41   6  47
+##     1     6  83  89
+##     Sum  47  89 136</code></pre>
+<pre class="r"><code>(41 + 83)/136  #accuracy</code></pre>
+<pre><code>## [1] 0.9117647</code></pre>
+<pre class="r"><code>83/89  #TPR</code></pre>
+<pre><code>## [1] 0.9325843</code></pre>
+<pre class="r"><code>41/47  #TNR</code></pre>
+<pre><code>## [1] 0.8723404</code></pre>
+<pre class="r"><code>83/89  #PPV</code></pre>
+<pre><code>## [1] 0.9325843</code></pre>
+<pre class="r"><code>ROCplot &lt;- ggplot(my) + geom_roc(aes(d = death, m = probs), n.cuts = 0)
+calc_auc(ROCplot)  #AUC</code></pre>
+<pre><code>##   PANEL group       AUC
+## 1     1    -1 0.9610328</code></pre>
+</div>
+<div id="for-the-final-part-of-the-project-i-performed-a-logistic-regression-between-death-and-id-trt-sex-futime-txtime-crtime-and-rltime.-i-then-created-a-confusion-matrix-to-calculate-the-in-sample-classification-diagnostics-accuracy0.91-sensitivity0.93-specificity0.87-precision0.9-and-auc0.96.-as-the-auc-was-greater-than-0.9-it-is-considered-a-great-auc." class="section level4">
+<h4>For the final part of the project I performed a logistic regression between death and id, trt, sex, futime, txtime, crtime, and rltime. I then created a confusion matrix to calculate the in sample classification diagnostics: Accuracy=0.91, Sensitivity=0.93, Specificity=0.87, Precision=0.9, and AUC=0.96. As the AUC was greater than 0.9 it is considered a great AUC.</h4>
+<pre class="r"><code># 10fold
+k = 10
+data &lt;- my[sample(nrow(my)), ]  #randomly order rows
+folds &lt;- cut(seq(1:nrow(my)), breaks = k, labels = F)  #create folds
+diags &lt;- NULL
+for (i in 1:k) {
+    ## create training and test sets
+    train &lt;- data[folds != i, ]
+    test &lt;- data[folds == i, ]
+    truth &lt;- test$death
+    fit2 &lt;- glm(death ~ ., data = train, family = binomial)
+    probs &lt;- predict(fit2, newdata = test, type = &quot;response&quot;)
+    diags &lt;- rbind(diags, class_diag(probs, truth))
+}
+summarize_all(diags, mean)</code></pre>
+<pre><code>##         acc      sens      spec       ppv       f1       auc
+## 1 0.8978022 0.9201587 0.8457143 0.9225397 0.918094 0.8868481</code></pre>
+</div>
+<div id="i-then-performed-a-10-fold-cv-on-the-model.-the-average-out-of-sample-classification-for-the-10-fold-cv-are-as-follows-accuracy0.89-sensitivity0.908-specificity0.866-precision-0.918-and-auc-0.93-respectively.-the-auc-in-the-10-fold-cv-dropped-by-0.03.-it-is-still-considered-a-great-auc." class="section level4">
+<h4>I then performed a 10-fold CV on the model. The average out of sample classification for the 10 fold CV are as follows: Accuracy=0.89, Sensitivity=0.908, Specificity=0.866, Precision= 0.918, and AUC= 0.93, respectively. The AUC in the 10-fold CV dropped by 0.03. It is still considered a great AUC.</h4>
+<pre class="r"><code># lassso
+y &lt;- as.matrix(my$death)  #response
+x &lt;- model.matrix(death ~ ., data = my)[, -1]  #predictors
+cv &lt;- cv.glmnet(x, y, family = &quot;binomial&quot;)
+lasso &lt;- glmnet(x, y, family = &quot;binomial&quot;, lambda = cv$lambda.1se)
+coef(lasso)</code></pre>
+<pre><code>## 8 x 1 sparse Matrix of class &quot;dgCMatrix&quot;
+##                       s0
+## (Intercept)  2.865982835
+## id           .          
+## trtB         .          
+## sexm         .          
+## futime      -0.002034636
+## txtime       .          
+## crtime       .          
+## rltime       .</code></pre>
+</div>
+<div id="a-lasso-regression-was-then-performed-on-the-same-model-as-before.-out-of-the-seven-variables-only-futime-was-retained-showing-that-it-the-most-important-predictor-of-death-in-the-modelmyeloid-dataset.-this-retainment-makes-a-lot-of-sense-because-death-and-futime-are-contingent-on-each-other." class="section level4">
+<h4>A lasso regression was then performed on the same model as before. Out of the seven variables, only futime was retained, showing that it the most important predictor of death in the model/myeloid dataset. This retainment makes a lot of sense because death and futime are contingent on each other.</h4>
+<pre class="r"><code># 10fold lasso
+k = 10
+data &lt;- my %&gt;% sample_frac  #rows in random order
+folds &lt;- ntile(1:nrow(data), n = 10)  #fold labels
+diags &lt;- NULL
+for (i in 1:k) {
+    train &lt;- data[folds != i, ]
+    test &lt;- data[folds == i, ]
+    truth &lt;- test$death
+    fit &lt;- glm(death ~ futime, data = train, family = &quot;binomial&quot;)
+    probs &lt;- predict(fit, newdata = test, type = &quot;response&quot;)
+    diags &lt;- rbind(diags, class_diag(probs, truth))
+}
+diags %&gt;% summarize_all(mean)</code></pre>
+<pre><code>##         acc      sens      spec      ppv        f1       auc
+## 1 0.9258242 0.9484091 0.8891667 0.942298 0.9422808 0.9619697</code></pre>
+</div>
+<div id="for-the-final-part-of-this-logistic-regression-model-a-10-fold-cv-was-performed-on-the-lasso-regression.-this-model-only-contained-futime-as-it-was-the-only-variable-that-was-retained-during-the-lasso-regression.-the-model-out-of-sample-auc-is-0.963.-the-10-fold-lasso-auc-is-also-considered-a-great-auc-just-like-the-original-models-auc-and-the-10-fold-auc.-out-of-the-three-the-10-fold-lasso-has-the-highest-auc-0.963-followed-by-the-originals0.961-and-the-10-fold-cv0.93." class="section level4">
+<h4>For the final part of this logistic regression model, a 10-fold CV was performed on the lasso regression. This model only contained futime as it was the only variable that was retained during the lasso regression. The model out of sample AUC is 0.963. The 10-fold lasso AUC is also considered a great AUC just like the original models AUC and the 10-fold AUC. Out of the three, the 10-fold lasso has the highest AUC (0.963), followed by the originals(0.961), and the 10-fold CV(0.93).</h4>
+<p>...</p>
+</div>
+</div>
+</div>
+
+            
+        <hr>         <div class="related-posts">
+                <h5>Related Posts</h5>
+                
+              </div> 
+            </div>
+          </div>
+
+   <hr>  <div class="disqus">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+
+    (function() {
+      
+      
+      if (window.location.hostname == "localhost")
+        return;
+
+      var disqus_shortname = '';
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  <a href="http://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div> 
+        </div>
+      </div>
+    </div>
+
+    
+    <footer>
+  <div id="footer">
+    <div class="container">
+      <p class="text-muted">&copy; All rights reserved. Powered by <a href="https://gohugo.io/">Hugo</a> and
+      <a href="http://www.github.com/nurlansu/hugo-sustain/">sustain</a> with ♥</p>
+    </div>
+  </div>
+</footer>
+<div class="footer"></div>
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<script src="../../js/docs.min.js"></script>
+<script src="../../js/main.js"></script>
+
+<script src="../../js/ie10-viewport-bug-workaround.js"></script>
+
+
+    
+  </body>
+</html>

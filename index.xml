@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Victoria de la Garza</title>
+    <link>/</link>
+    <description>Recent content on Victoria de la Garza</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-US</language>
+    <lastBuildDate>Fri, 04 Dec 2020 00:00:00 +0000</lastBuildDate><atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>test 3</title>
+      <link>/post/2020/12/04/test-3/</link>
+      <pubDate>Fri, 04 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2020/12/04/test-3/</guid>
+      <description>  </description>
+    </item>
+    
+    <item>
+      <title>Test blog</title>
+      <link>/post/2020/12/04/test-blog/</link>
+      <pubDate>Fri, 04 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2020/12/04/test-blog/</guid>
+      <description>  Link to project 1 [Link to my dogs Instagram] (https://www.instagram.com/theo.theminiaussie/)
+#try #test This is theo he is an mini aussie and is 3 years old. I bought him my first year at UT when I was still living in the dorms. He is a little spoiled but still very cute.
+ </description>
+    </item>
+    
+    <item>
+      <title>test blog 2</title>
+      <link>/post/2020/12/04/test-blog-2/</link>
+      <pubDate>Fri, 04 Dec 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2020/12/04/test-blog-2/</guid>
+      <description>jdnjgabdsbg</description>
+    </item>
+    
+    <item>
+      <title>Project 1: Exploratory Data Analysis</title>
+      <link>/project/project1/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/project/project1/</guid>
+      <description>Data Wrangling and Data Exploration Introduction When first hearing about this project, I knew that I would want to work with a dataset that contained either genes, diseases, or chromosomes. These three topics are some of my favorite topics in Biology so I knew that incorporating them into my project would make it a lot more interesting for me. When looking for datasets I found many that dealt with genes and chromosomes but, I felt that diseases are much more relevant to the current problems within the world.</description>
+    </item>
+    
+    <item>
+      <title>Project 2: Modeling, Testing, and Predicting</title>
+      <link>/project/project2/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/project/project2/</guid>
+      <description>Modeling Libraries and Functions library(survival) library(sandwich) library(lmtest) library(dplyr) library(rstatix) library(vegan) library(plotROC) library(glmnet) ## GIVE IT PREDICTED PROBS AND TRUTH LABELS (0/1), RETURNS ## VARIOUS DIAGNOSTICS class_diag &amp;lt;- function(probs, truth) { # CONFUSION MATRIX: CALCULATE ACCURACY, TPR, TNR, PPV if (is.character(truth) == TRUE) truth &amp;lt;- as.factor(truth) if (is.numeric(truth) == FALSE &amp;amp; is.logical(truth) == FALSE) truth &amp;lt;- as.numeric(truth) - 1 tab &amp;lt;- table(factor(probs &amp;gt; 0.5, levels = c(&amp;quot;FALSE&amp;quot;, &amp;quot;TRUE&amp;quot;)), factor(truth, levels = c(0, 1))) acc = sum(diag(tab))/sum(tab) sens = tab[2, 2]/colSums(tab)[2] spec = tab[1, 1]/colSums(tab)[1] ppv = tab[2, 2]/rowSums(tab)[2] f1 = 2 * (sens * ppv)/(sens + ppv) # CALCULATE EXACT AUC ord &amp;lt;- order(probs, decreasing = TRUE) probs &amp;lt;- probs[ord] truth &amp;lt;- truth[ord] TPR = cumsum(truth)/max(1, sum(truth)) FPR = cumsum(!</description>
+    </item>
+    
+    <item>
+      <title>Projects</title>
+      <link>/projects/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/projects/</guid>
+      <description>  Check out some of my coding projects below:
+ Wrangling &amp;amp; Exploratory Data Analysis
+ Modeling, Inference, Prediction
+  -- </description>
+    </item>
+    
+    <item>
+      <title>Resume</title>
+      <link>/resume/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/resume/</guid>
+      <description>     </description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="author" content="Victoria de la Garza" />
+    
+    <link rel="shortcut icon" type="image/x-icon" href="../../img/favicon.ico">
+    <title>Project 1: Exploratory Data Analysis</title>
+    <meta name="generator" content="Hugo 0.79.0" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="../../css/main.css" />
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,400,200bold,400old" />
+    
+    <!--[if lt IE 9]>
+			<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+			<script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+		<![endif]-->
+
+    
+  </head>
+
+  <body>
+    <div id="wrap">
+      
+      <nav class="navbar navbar-default">
+  <div class="container">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="../../"><i class="fa fa-home"></i></a>
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+    </div>
+    <div class="navbar-collapse collapse" id="navbar">
+      <ul class="nav navbar-nav navbar-right">
+      
+        
+        <li><a href="../../post/">BLOG</a></li>
+        
+        <li><a href="../../projects/">PROJECTS</a></li>
+        
+        <li><a href="../../resume/">RESUME</a></li>
+        
+      
+      </ul>
+    </div>
+  </div>
+</nav>
+
+      <div class="container">
+        <div class="blog-post">
+          <h3>
+            <strong><a href="../../project/project1/">Project 1: Exploratory Data Analysis</a></strong>
+          </h3>
+        </div>
+ 
+<div class="blog-title">
+          <h4>
+         January 1, 0001 
+            &nbsp;&nbsp;
+            
+          </h4>
+        </div>
+
+        <div class="panel panel-default">
+          <div class="panel-body">
+            <div class="blogpost">
+              
+<link href="../../rmarkdown-libs/anchor-sections/anchor-sections.css" rel="stylesheet" />
+<script src="../../rmarkdown-libs/anchor-sections/anchor-sections.js"></script>
+
+
+<div id="data-wrangling-and-data-exploration" class="section level2">
+<h2>Data Wrangling and Data Exploration</h2>
+<div id="introduction" class="section level3">
+<h3>Introduction</h3>
+<p>When first hearing about this project, I knew that I would want to work with a dataset that contained either genes, diseases, or chromosomes. These three topics are some of my favorite topics in Biology so I knew that incorporating them into my project would make it a lot more interesting for me. When looking for datasets I found many that dealt with genes and chromosomes but, I felt that diseases are much more relevant to the current problems within the world. I choose the us_contagius_diseases dataset as it contained the yearly counts of 6 diseases within the US from 1928 to 2011. I then looked for a dataset that contained information about the States within the United States as I could join them together easily from the variable State. I eventually found the state.x77 matrix and converted into a data set adding the variable region to list each region of the US the State appeared in. The US contagious diseases dataset contains the variables disease, state, year, weeks_reporting, count (cases), and population. Within the variable disease, there are six diseases: Hepatitis A, Measles, Mumps, Pertussis, Polio, Rubella, and Smallpox. The State matrix/ now data set had many variables: Population, Income, Illiteracy, Life expectancy, Murder rate, High school graduation rate, number of days of frost per year, and the Area of the State. When looking at the variables of the two datasets I expect to see an association between the total number of cases a state has with the Illiteracy rate and population of the State. In other words, I expect to see a positive correlation between the total number of cases a state has and the population and illiteracy rate.</p>
+</div>
+<div id="finding-tidying-data" class="section level3">
+<h3>Finding/ Tidying data</h3>
+<pre class="r"><code>library(dslabs)
+library(dplyr)
+library(tidyverse)
+data(package = &quot;dslabs&quot;)
+disease &lt;- us_contagious_diseases
+head(disease)</code></pre>
+<pre><code>##       disease   state year weeks_reporting count population
+## 1 Hepatitis A Alabama 1966              50   321    3345787
+## 2 Hepatitis A Alabama 1967              49   291    3364130
+## 3 Hepatitis A Alabama 1968              52   314    3386068
+## 4 Hepatitis A Alabama 1969              49   380    3412450
+## 5 Hepatitis A Alabama 1970              51   413    3444165
+## 6 Hepatitis A Alabama 1971              51   378    3481798</code></pre>
+<pre class="r"><code>state &lt;- data.frame(region = state.region, state.x77) %&gt;% rownames_to_column(var = &quot;state&quot;)
+head(state)</code></pre>
+<pre><code>##        state region Population Income Illiteracy Life.Exp Murder HS.Grad Frost
+## 1    Alabama  South       3615   3624        2.1    69.05   15.1    41.3    20
+## 2     Alaska   West        365   6315        1.5    69.31   11.3    66.7   152
+## 3    Arizona   West       2212   4530        1.8    70.55    7.8    58.1    15
+## 4   Arkansas  South       2110   3378        1.9    70.66   10.1    39.9    65
+## 5 California   West      21198   5114        1.1    71.71   10.3    62.6    20
+## 6   Colorado   West       2541   4884        0.7    72.06    6.8    63.9   166
+##     Area
+## 1  50708
+## 2 566432
+## 3 113417
+## 4  51945
+## 5 156361
+## 6 103766</code></pre>
+<pre class="r"><code># Tidying
+diseasew &lt;- disease %&gt;% pivot_wider(names_from = disease, values_from = count)  #Giving each disease its own column (making it wide/ untidy) with its respective count residing in it. 
+diseasew %&gt;% pivot_longer(cols = c(&quot;Hepatitis A&quot;:&quot;Smallpox&quot;), 
+    names_to = &quot;disease&quot;, values_to = &quot;count&quot;) %&gt;% na.omit()  #Putting each disease into a signular column(tidying it) and their counts into its own singular column. </code></pre>
+<pre><code>## # A tibble: 15,851 x 6
+##    state    year weeks_reporting population disease     count
+##    &lt;fct&gt;   &lt;dbl&gt;           &lt;dbl&gt;      &lt;dbl&gt; &lt;chr&gt;       &lt;dbl&gt;
+##  1 Alabama  1966              50    3345787 Hepatitis A   321
+##  2 Alabama  1966              50    3345787 Measles      1813
+##  3 Alabama  1967              49    3364130 Hepatitis A   291
+##  4 Alabama  1968              52    3386068 Hepatitis A   314
+##  5 Alabama  1969              49    3412450 Hepatitis A   380
+##  6 Alabama  1970              51    3444165 Hepatitis A   413
+##  7 Alabama  1970              51    3444165 Mumps         392
+##  8 Alabama  1970              51    3444165 Rubella       380
+##  9 Alabama  1971              51    3481798 Hepatitis A   378
+## 10 Alabama  1971              51    3481798 Mumps        1025
+## # … with 15,841 more rows</code></pre>
+<pre class="r"><code>statew &lt;- state %&gt;% pivot_wider(names_from = state, values_from = Illiteracy)  #Giving each State its own coulmn and having its Illiteracy rate as the value within the column, esentially making the dataset untidy. 
+statew %&gt;% pivot_longer(cols = c(&quot;Alabama&quot;:&quot;Wyoming&quot;), names_to = &quot;state&quot;, 
+    values_to = &quot;Illiteracy&quot;) %&gt;% na.omit()  #Bringing each State into a singular column with Illiteracy values in its own colum, tidying the data. </code></pre>
+<pre><code>## # A tibble: 50 x 10
+##    region Population Income Life.Exp Murder HS.Grad Frost   Area state
+##    &lt;fct&gt;       &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;
+##  1 South        3615   3624     69.0   15.1    41.3    20  50708 Alab…
+##  2 West          365   6315     69.3   11.3    66.7   152 566432 Alas…
+##  3 West         2212   4530     70.6    7.8    58.1    15 113417 Ariz…
+##  4 South        2110   3378     70.7   10.1    39.9    65  51945 Arka…
+##  5 West        21198   5114     71.7   10.3    62.6    20 156361 Cali…
+##  6 West         2541   4884     72.1    6.8    63.9   166 103766 Colo…
+##  7 North…       3100   5348     72.5    3.1    56     139   4862 Conn…
+##  8 South         579   4809     70.1    6.2    54.6   103   1982 Dela…
+##  9 South        8277   4815     70.7   10.7    52.6    11  54090 Flor…
+## 10 South        4931   4091     68.5   13.9    40.6    60  58073 Geor…
+## # … with 40 more rows, and 1 more variable: Illiteracy &lt;dbl&gt;</code></pre>
+</div>
+<div id="joining-data" class="section level3">
+<h3>Joining data</h3>
+<p>I decided to join the datasets by doing an inner join as it would allow me to join the datasets by the variable State and return all the rows that there are matching variables. Joining by InnerJoin also allowed for the State varible- District of Columbia to be dropped as it was not in the State dataset but was in the US Contagious diseases dataset. There were 15851 observations in the US Contagious diseases dataset and 50 observations within the State dataset. After joining by using InnerJoin I had to filter by the year 1970 as a lot of the data from the State dataset came from the year 1970. I also removed the variable Population that came from the State dataset as it was very similar to the one within the US Contagious diseases Dataset; and made every factor into a character. After all the changes that I made there were 200 observations and 14 variables in the joined dataset.</p>
+<pre class="r"><code>IJ &lt;- inner_join(disease, state, by = &quot;state&quot;)
+head(IJ)</code></pre>
+<pre><code>##       disease   state year weeks_reporting count population region Population
+## 1 Hepatitis A Alabama 1966              50   321    3345787  South       3615
+## 2 Hepatitis A Alabama 1967              49   291    3364130  South       3615
+## 3 Hepatitis A Alabama 1968              52   314    3386068  South       3615
+## 4 Hepatitis A Alabama 1969              49   380    3412450  South       3615
+## 5 Hepatitis A Alabama 1970              51   413    3444165  South       3615
+## 6 Hepatitis A Alabama 1971              51   378    3481798  South       3615
+##   Income Illiteracy Life.Exp Murder HS.Grad Frost  Area
+## 1   3624        2.1    69.05   15.1    41.3    20 50708
+## 2   3624        2.1    69.05   15.1    41.3    20 50708
+## 3   3624        2.1    69.05   15.1    41.3    20 50708
+## 4   3624        2.1    69.05   15.1    41.3    20 50708
+## 5   3624        2.1    69.05   15.1    41.3    20 50708
+## 6   3624        2.1    69.05   15.1    41.3    20 50708</code></pre>
+<pre class="r"><code>IJ2 &lt;- IJ %&gt;% filter(year == &quot;1970&quot;) %&gt;% rename(weeks.reporting = weeks_reporting) %&gt;% 
+    mutate(across(where(is.factor), as.character)) %&gt;% select(-Population)</code></pre>
+</div>
+<div id="wrangling" class="section level3">
+<h3>Wrangling</h3>
+<pre class="r"><code>IJP &lt;- IJ %&gt;% mutate(pop_percentile = ntile(population, 5))
+# I then selected the variables we wanted to look at and
+# arranged the count variable in descending order so that we
+# can see what disase and state had the highest cases and the
+# litteracy that corresponded to the state
+IJ2 %&gt;% select(state, disease, count, Illiteracy) %&gt;% arrange(desc(count)) %&gt;% 
+    glimpse()</code></pre>
+<pre><code>## Rows: 200
+## Columns: 4
+## $ state      &lt;chr&gt; &quot;Wisconsin&quot;, &quot;California&quot;, &quot;Texas&quot;, &quot;Texas&quot;, &quot;Michigan&quot;, &quot;…
+## $ disease    &lt;chr&gt; &quot;Mumps&quot;, &quot;Hepatitis A&quot;, &quot;Measles&quot;, &quot;Rubella&quot;, &quot;Mumps&quot;, &quot;Mu…
+## $ count      &lt;dbl&gt; 11346, 9422, 8327, 8323, 7672, 6225, 5972, 5829, 5253, 502…
+## $ Illiteracy &lt;dbl&gt; 0.7, 1.1, 2.2, 2.2, 0.9, 1.1, 2.2, 0.6, 1.1, 1.4, 0.8, 0.6…</code></pre>
+<pre class="r"><code># T see what state has the least amount of cases then
+# proportion it to pop
+IJP %&gt;% group_by(state, population) %&gt;% summarise(total_cases = sum(count)) %&gt;% 
+    summarise(prop_case_pop = (total_cases/population)) %&gt;% arrange(desc(prop_case_pop))</code></pre>
+<pre><code>## # A tibble: 4,138 x 2
+## # Groups:   state [50]
+##    state     prop_case_pop
+##    &lt;chr&gt;             &lt;dbl&gt;
+##  1 Vermont          0.0297
+##  2 Utah             0.0289
+##  3 Wisconsin        0.0277
+##  4 Vermont          0.0243
+##  5 Vermont          0.0234
+##  6 Utah             0.0228
+##  7 Utah             0.0220
+##  8 Montana          0.0214
+##  9 Utah             0.0210
+## 10 Vermont          0.0195
+## # … with 4,128 more rows</code></pre>
+<p>When creating the summary statistics for my data, I first summarize the numeric variables by finding their minimums, 25 quartile, median, 75 quartiles, max, mean, standard deviation, and variance. I then reshaped the graph to make it easier to read. I found that the variable Area has a q25 of 36097 square miles, the median is 54277, Q75 is 81787,a mean of 70735.88, SD of 8.468. The Area variable has a high variance(7.17e+09) meaning its data is very spread out, we can see this by how far apart the minimum(1049) and maximum(566432) values are. Surprisingly, the count variable had a minimum of 0 meaning there was a disease with no cases for the year of 1970 and a maximum of 11346. Its quartile ranges (25, median, 75) are 167, 599, and 1543.25 . The mean of count was 1255.18, SD was 1.78, and a variance of 3.17e+06. Illiteracy has a minimum of 0, and a maximum of 2.8 meaning that one states whole population is literate while another state only has 97.2% of its population literate. The quartile ranges (25, median, 75) are 0.6,0.95, and 1.60; the mean is 1.17, SD is 6.049, and the variance is 3.66e+01. Population has a minimum of 300382, a maximum of 19953134m a mean of 4049108.32, a SD of 4.299e+06, and a variance of 1.84e+13. Similar to Area, population has a high variance meaning that the data for the population of states is very spread out. The respective quartile ranges for the variable population is 992048, 2707446, 4676501. The variable weeks reporting has a minimum of 0 and a max of 51 showing that one State did not have any cases of a disease in the year 1970, another state has 51 weeks of the year with cases from a disease. The mean amount of weeks reporting was 47.585 showing that a lot of States had a high number of weeks reporting per year as the SD(8.798) and variance(7.74e+01) are both relatively small showing that the data for weeks reporting is mostly in the upper week range. The respective quartile ranges are 49,51,and 51 weeks reporting. Each variable had 200 values, Area and population have 50 distinct values, count has 190, Illiteracy and weeks reporting has 20 distinct values.</p>
+<pre class="r"><code># overall sum stats
+IJ2 %&gt;% select(c(Area, count, Illiteracy, population, weeks.reporting)) %&gt;% 
+    summarise_if(is.numeric, funs(min = min, q25 = quantile(., 
+        0.25), median = median, q75 = quantile(., 0.75), max = max, 
+        mean = mean, sd = sd, vari = var)) %&gt;% gather(stat, val) %&gt;% 
+    separate(stat, into = c(&quot;var&quot;, &quot;stat&quot;), sep = &quot;_&quot;) %&gt;% spread(stat, 
+    val) %&gt;% select(var, min, q25, median, q75, max, mean, sd, 
+    vari)</code></pre>
+<pre><code>##               var      min      q25     median        q75        max
+## 1            Area   1049.0  36097.0   54277.00   81787.00   566432.0
+## 2           count      0.0    167.5     599.50    1543.25    11346.0
+## 3      Illiteracy      0.5      0.6       0.95       1.60        2.8
+## 4      population 300382.0 992048.0 2707446.00 4676501.00 19953134.0
+## 5 weeks.reporting      0.0     49.0      51.00      51.00       51.0
+##          mean           sd         vari
+## 1   70735.880 8.468169e+04 7.170988e+09
+## 2    1255.180 1.779625e+03 3.167064e+06
+## 3       1.170 6.049212e-01 3.659296e-01
+## 4 4049108.320 4.299985e+06 1.848987e+13
+## 5      47.585 8.797714e+00 7.739977e+01</code></pre>
+<pre class="r"><code>IJ2 %&gt;% select(c(Area, count, Illiteracy, population, weeks.reporting)) %&gt;% 
+    summarise_if(is_numeric, function(n) n = n())</code></pre>
+<pre><code>##   Area count Illiteracy population weeks.reporting
+## 1  200   200        200        200             200</code></pre>
+<pre class="r"><code>IJ2 %&gt;% select(c(Area, count, Illiteracy, population, weeks.reporting)) %&gt;% 
+    summarise_all(n_distinct)</code></pre>
+<pre><code>##   Area count Illiteracy population weeks.reporting
+## 1   50   190         20         50              20</code></pre>
+<pre class="r"><code># cor
+IJ2_cor &lt;- IJ2 %&gt;% select_if(is.numeric) %&gt;% cor(use = &quot;pair&quot;)
+tidyIJ2cor &lt;- IJ2_cor %&gt;% as.data.frame %&gt;% rownames_to_column(&quot;var1&quot;) %&gt;% 
+    pivot_longer(-1, names_to = &quot;var2&quot;, values_to = &quot;correlation&quot;) %&gt;% 
+    na.omit()
+tidyIJ2cor</code></pre>
+<pre><code>## # A tibble: 100 x 3
+##    var1            var2            correlation
+##    &lt;chr&gt;           &lt;chr&gt;                 &lt;dbl&gt;
+##  1 weeks.reporting weeks.reporting      1     
+##  2 weeks.reporting count                0.232 
+##  3 weeks.reporting population           0.0965
+##  4 weeks.reporting Income              -0.0464
+##  5 weeks.reporting Illiteracy           0.0277
+##  6 weeks.reporting Life.Exp             0.177 
+##  7 weeks.reporting Murder              -0.145 
+##  8 weeks.reporting HS.Grad             -0.0319
+##  9 weeks.reporting Frost               -0.151 
+## 10 weeks.reporting Area                -0.0906
+## # … with 90 more rows</code></pre>
+<pre class="r"><code># group by one region
+IJ2 %&gt;% group_by(region) %&gt;% select(c(Area, count, Illiteracy, 
+    population, weeks.reporting)) %&gt;% summarise_if(is_numeric, 
+    funs(min = min, q25 = quantile(., 0.25), median = median, 
+        q75 = quantile(., 0.75), max = max, mean = mean, sd = sd, 
+        vari = var)) %&gt;% pivot_longer(-region) %&gt;% pivot_wider(names_from = &quot;region&quot;, 
+    values_from = &quot;value&quot;)</code></pre>
+<pre><code>## # A tibble: 40 x 5
+##    name                `North Central` Northeast      South     West
+##    &lt;chr&gt;                         &lt;dbl&gt;     &lt;dbl&gt;      &lt;dbl&gt;    &lt;dbl&gt;
+##  1 Area_min                    36097      1049      1982      6425  
+##  2 count_min                       4         9         0         0  
+##  3 Illiteracy_min                  0.5       0.6       0.9       0.5
+##  4 population_min             617761    444330    548104    300382  
+##  5 weeks.reporting_min            19        11         0         0  
+##  6 Area_q25                    55427      7521     37294.    82677  
+##  7 count_q25                     254.      408.      229.      125. 
+##  8 Illiteracy_q25                  0.6       0.7       1.37      0.6
+##  9 population_q25            2055807.   946725   2473650.   694409  
+## 10 weeks.reporting_q25            49        50        49        46  
+## # … with 30 more rows</code></pre>
+<pre class="r"><code>IJ2 %&gt;% group_by(region) %&gt;% select(c(Area, count, Illiteracy, 
+    population, weeks.reporting)) %&gt;% summarise_if(is_numeric, 
+    function(n) n = n())</code></pre>
+<pre><code>## # A tibble: 4 x 6
+##   region         Area count Illiteracy population weeks.reporting
+##   &lt;chr&gt;         &lt;int&gt; &lt;int&gt;      &lt;int&gt;      &lt;int&gt;           &lt;int&gt;
+## 1 North Central    48    48         48         48              48
+## 2 Northeast        36    36         36         36              36
+## 3 South            64    64         64         64              64
+## 4 West             52    52         52         52              52</code></pre>
+<pre class="r"><code>IJ2 %&gt;% group_by(region) %&gt;% select(c(Area, count, Illiteracy, 
+    population, weeks.reporting)) %&gt;% summarise_all(n_distinct)</code></pre>
+<pre><code>## # A tibble: 4 x 6
+##   region         Area count Illiteracy population weeks.reporting
+##   &lt;chr&gt;         &lt;int&gt; &lt;int&gt;      &lt;int&gt;      &lt;int&gt;           &lt;int&gt;
+## 1 North Central    12    47          5         12               9
+## 2 Northeast         9    36          6          9               7
+## 3 South            16    62         14         16              13
+## 4 West             13    51          8         13              16</code></pre>
+<pre class="r"><code># group by two (region and disease)
+IJ2 %&gt;% group_by(region, disease) %&gt;% select(c(Area, count, Illiteracy, 
+    population, weeks.reporting)) %&gt;% summarise_if(is_numeric, 
+    funs(min = min, q25 = quantile(., 0.25), median = median, 
+        q75 = quantile(., 0.75), max = max, mean = mean, sd = sd, 
+        vari = var)) %&gt;% pivot_longer(-c(disease, region)) %&gt;% 
+    pivot_wider(names_from = c(&quot;region&quot;, &quot;disease&quot;), values_from = &quot;value&quot;)</code></pre>
+<pre><code>## # A tibble: 40 x 17
+##    name  `North Central_… `North Central_… `North Central_… `North Central_…
+##    &lt;chr&gt;            &lt;dbl&gt;            &lt;dbl&gt;            &lt;dbl&gt;            &lt;dbl&gt;
+##  1 Area…          36097            36097            36097            36097  
+##  2 coun…             21               49               58                4  
+##  3 Illi…              0.5              0.5              0.5              0.5
+##  4 popu…         617761           617761           617761           617761  
+##  5 week…             19               44               45               45  
+##  6 Area…          55427            55427            55427            55427  
+##  7 coun…            283.             242.             359              149. 
+##  8 Illi…              0.6              0.6              0.6              0.6
+##  9 popu…        2055807.         2055807.         2055807.         2055807. 
+## 10 week…             47.8             47.5             50.8             49.8
+## # … with 30 more rows, and 12 more variables: `Northeast_Hepatitis A` &lt;dbl&gt;,
+## #   Northeast_Measles &lt;dbl&gt;, Northeast_Mumps &lt;dbl&gt;, Northeast_Rubella &lt;dbl&gt;,
+## #   `South_Hepatitis A` &lt;dbl&gt;, South_Measles &lt;dbl&gt;, South_Mumps &lt;dbl&gt;,
+## #   South_Rubella &lt;dbl&gt;, `West_Hepatitis A` &lt;dbl&gt;, West_Measles &lt;dbl&gt;,
+## #   West_Mumps &lt;dbl&gt;, West_Rubella &lt;dbl&gt;</code></pre>
+<p>When grouping by the variable region, and tidying the tables so that each region have their own column and the summary statistics have their own rows. I found that the West has the highest values for the variable area, followed by the north central, then south, finally with the northeast region coming in last with the lowest variables. While looking at the variable count I found that West had the lowest value in for almost all of the summary statistics, followed by the south, North east, and the north central having the highest values. Northcentral had the lowest illiteracy values, followed by the northeast, west, and finally south having the highest values. The West had the lowest population values, followed by the south, northcentral ,and north east. The west had the lowest weeks reporting values, followed by northcentral, north east, and the south. Overall the west usually had the lowest summary statistics, the other 3 regions do not have an overall set place as they changed from 2nd lowest to highest with every variable. The North Central has 48 of each variable(area, count, illiteracy, population, and weeks reporting), the Northeast has 36, the South has 64, and the West has 52. Of the variables the North Central has 12 distinct values for area and population, 47 for count, 5 for illiteracy, and 9 for weeks reporting. The North East has 9 distinct values for area and population, 36 for count, 6 for illiteracy, and 7 for weeks reporting. The south has 16 distinct values for area and population, 62 for count, 14 for illiteracy, and 13 for weeks reporting. The west has 51 distinct values for count, 8 for illiteracy, 16 for weeks reporting, and 13 for area and population. When grouping by two variables region and disease the table was very redundant of the last grouping with only the variables count and weeks reporting change for each region/ disease.</p>
+</div>
+<div id="visualizing" class="section level3">
+<h3>Visualizing</h3>
+<pre class="r"><code>tidyIJ2cor %&gt;% ggplot(aes(var1, var2, fill = correlation)) + 
+    geom_tile() + scale_fill_gradient2(low = &quot;pink&quot;, mid = &quot;white&quot;, 
+    high = &quot;purple&quot;) + geom_text(aes(label = round(correlation, 
+    2)), color = &quot;black&quot;, size = 3) + theme(axis.text.x = element_text(angle = 90, 
+    hjust = 1)) + xlab(&quot;&quot;) + ylab(&quot;&quot;) + coord_fixed() + ggtitle(&quot;Correlation Heatmap of Numeric Variables&quot;)</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-5-1.png" width="672" style="display: block; margin: auto;" /> The correlation heatmap allows for us to visualize the correlation between two variables. Along each axis are the variables, the colored boxes is the correlation between the two variables. In this figure, purple is positive, white is zero, and pink is negative. The diagonal line of purple shows the perfect correlation between two of the same variables. Excluding the purple diagonal line the highest correlation in my heat map is a correlation between murder and illiteracy rate (0.7). The highest negative correlation is between murder and life expectancy (-0.78). This shows that there is a negative correlation between murder and life expectancy so as the murder rate increases the life expectancy of that state decreases. Population and count have a high positive correlation (0.61), revealing that as the population of a state increases so does the count of diseases. We can also see a strong negative correlation between illiteracy and Hs. Grade rate (-0.66), as high school grade rate increase illiteracy decreases. Surprisingly, there is also a strong negative correlation between the number of frost days a state has to the murder rate (-0.54), meaning as frost days increase murder rate decreases. There does not seem to be a correlation between illiteracy and count (0.01), illiteracy and weeks reporting (0.03), count and Hs. Grad (0.01), weeks reporting and Hs. Grad (-0.03), or population and area(0.01).</p>
+<pre class="r"><code>IJ2 %&gt;% group_by(state) %&gt;% mutate(total_cases = sum(count)) %&gt;% 
+    ggplot(aes(population, Illiteracy, color = total_cases)) + 
+    geom_point() + geom_smooth(method = &quot;lm&quot;, se = FALSE) + scale_x_log10() + 
+    scale_y_continuous(breaks = seq(0, 3, 0.5)) + scale_color_gradient(low = &quot;pink&quot;, 
+    high = &quot;purple&quot;) + ggtitle(&quot;Relationship of Total Cases vs. Population and Illiteracy Rates&quot;) + 
+    labs(color = &quot;Total Cases&quot;, y = &quot;Illiteracy Rate&quot;, x = &quot;State Population&quot;)</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-6-1.png" width="672" style="display: block; margin: auto;" /> For Graph 2: Relationship of Total Cases vs. Population and Illiteracy Rates I decided to graph the state populations on the x-axis and the illiteracy rates on the y-axis, then colored by the total number of cases in each state. The x-axis was plotted on a log10 scale. This graph shows that there is positive relationship between state population and illiteracy rates. By coloring the total cases with the lowest amount of total cases being pink and the highest being purple, we can see that states with a smaller population have a lower amount of cases(light pink), and states with higher populations have larger amount of total cases (deep purple). There also appears to be a slight relationship between Illiteracy rate, state population, and total cases as in states with a lower illiteracy rate/population have a smaller amount of total cases. Additionally the graph shows that most of the state’s populations fall between 1e6 and 1e7 and the populations that fall within this range have the most visual variance between total cases and illiteracy rates.</p>
+<pre class="r"><code>ggplot(IJ2, aes(x = region, y = count, fill = disease)) + geom_bar(stat = &quot;summary&quot;, 
+    position = &quot;dodge&quot;) + geom_errorbar(stat = &quot;summary&quot;, position = &quot;dodge&quot;) + 
+    ggtitle(&quot;Region vs. Count of Diseases&quot;) + scale_fill_manual(values = c(&quot;#FFCCFF&quot;, 
+    &quot;#FF99FF&quot;, &quot;#ff66ff&quot;, &quot;#ff33ff&quot;))</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-7-1.png" width="672" style="display: block; margin: auto;" /> Graph 3: Region vs. Count of Diseases is a bar graph that shows the count of each disease within a region. For Graph 3, I decided to graph region on the x-axis, count on the y-axis, and fill each bar with a color designated to a disease. Out of the four disease: Hepatitis A, Measles, Mumps, and Rubella, the disease Mumps had the most amount of cases per region. The North Central region had the highest amount of total mumps cases and the West region had the lowest. The North Central Mumps count also had the largest distribution of total cases as seen by the error bars. No other disease followed a similar trend across the four regions. It is apparent that The North Central region has the highest amount of total cases within the 4 regions, and the West region has the least. The count per diseases within the South region is within 800 counts of each other showing that there is not a large distribution between the counts of diseases. While other regions have a larger distribution (around 2000) between their diseases.</p>
+<p>Without considering the error bars, the Northeast had the highest count of Hepatitis A (around 1700), followed by the West( around 1100), North Central(around 900), and the South(around 800). The South had the most amount of cases of Measles ( around 1300), followed by the North Central (around 1200), the North East(around 700), and the West (around 400). Of the regions for the disease mumps the region North Central has the highest count (around 2800), the north east had the second highest (around 2100), the south had the second lowest (around 1600), and the West had the lowest( around 1500). The last disease, Rubella had its highest count in the North central region (around 1250), the next highest occurred in the South (around 1200), followed by the West(around 1100), lastly the region with the least amount of Rubella cases the North east (around 700). Overall the disease mumps within the North Central region has the highest count, while the disease measles within the West region had the lowest count.</p>
+</div>
+<div id="dimensionality-reduction" class="section level3">
+<h3>Dimensionality Reduction</h3>
+<pre class="r"><code>library(cluster)
+IJP &lt;- IJ2 %&gt;% select(c(population, count, weeks.reporting))  #choosing what to select to pam
+pam1 &lt;- IJP %&gt;% scale %&gt;% pam(k = 2)  #proccessing and scaling data
+sil_width &lt;- vector()  #empty vector to hold mean sil width
+for (i in 2:10) {
+    kms &lt;- kmeans(IJP, centers = i)  #compute kmeans solution
+    sil &lt;- silhouette(kms$cluster, dist(IJP))  #get sil widths
+    sil_width[i] &lt;- mean(sil[, 3])  #take means
+}
+ggplot() + geom_line(aes(x = 1:10, y = sil_width)) + scale_x_continuous(name = &quot;k&quot;, 
+    breaks = 1:10)  #silhouette method, shows me that using 2 clusters is best for my data</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-8-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># run cluster analysis
+IJF &lt;- IJP %&gt;% mutate(cluster = as.factor(pam1$clustering))  #creates a column for the cluster assignment in the dataframe and adds which cluster each row belongs to into the df
+IJF %&gt;% group_by(cluster) %&gt;% summarise_if(is.numeric, mean, 
+    na.rm = T)  #summarizes the mean values for the three numberic variables for the clusters</code></pre>
+<pre><code>## # A tibble: 2 x 4
+##   cluster population count weeks.reporting
+##   &lt;fct&gt;        &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;
+## 1 1         2186806.  518.            46.8
+## 2 2         9788039. 3526.            50.1</code></pre>
+<pre class="r"><code># visualize clusters
+library(GGally)
+ggpairs(IJF, columns = 1:3, aes(color = cluster))  #All pairwise combinations of the 3 variables</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-8-2.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ggplot(IJF, aes(x = population, y = count, color = cluster)) + 
+    geom_point() + ggtitle(&quot;Clusters Assignments of Count and Population&quot;)  #make pretty ggplot to show differnt clusters</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-8-3.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># goodness of fit
+plot(pam1, which = 2)  #shows the avg. sil with 0.52 is reasonable</code></pre>
+<p><img src="../../project/project1_files/figure-html/unnamed-chunk-8-4.png" width="672" style="display: block; margin: auto;" /> For the Dimensionality reduction part of the project I decided to use k-means/PAM clustering on the variables: population, count, and weeks reporting. I scaled my data to standardized the values before performing the analysis on it. After scaling my data I created a graph to visualize how many clusters I should have as it is hard to tell just from the data. From the graph I found that I only needed to have 2 clusters when running the PAM Analysis. I then ran the cluster analysis and added a column into the data frame to show which cluster each row belongs to. After that I summarized the mean values for each cluster to see how different they are from each other. Cluster 1 had a mean population of 2186806, count of 518.2583, and a mean week reporting of 46.77483. Cluster 2 on the other hand had a mean population of 9788039, count of 3526.1020, and a mean week reporting of 50.08163. Just from viewing the means I can assume that cluster 1 consist of states with a lower population, count, and weeks reporting.</p>
+<p>Next I created two graphs of my clusters by using the data frame with the cluster assignments in it. The first graph shows the correlation between the variables, as well as the pairwise combinations. Population and count had the highest correlation of 0.609, followed by count and weeks reporting (0.232), and weeks reporting and population (0.097). From the graph I can also see that the clusters are more distinct within the population and graph variable and less distinct within population and weeks reporting. The second graph is a simple ggplot to show the cluster assignments of count and population. This graph a bigger version of one of the graphs in graph 1. Finally, I ran a goodness of fit to see the average silhouette width to see how strong of a structure I found. My average silhouette width is 0.52, showing that a reasonable structure has been found.</p>
+</div>
+</div>
+
+            
+        <hr>         <div class="related-posts">
+                <h5>Related Posts</h5>
+                
+              </div> 
+            </div>
+          </div>
+
+   <hr>  <div class="disqus">
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+
+    (function() {
+      
+      
+      if (window.location.hostname == "localhost")
+        return;
+
+      var disqus_shortname = '';
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  <a href="http://disqus.com/" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div> 
+        </div>
+      </div>
+    </div>
+
+    
+    <footer>
+  <div id="footer">
+    <div class="container">
+      <p class="text-muted">&copy; All rights reserved. Powered by <a href="https://gohugo.io/">Hugo</a> and
+      <a href="http://www.github.com/nurlansu/hugo-sustain/">sustain</a> with ♥</p>
+    </div>
+  </div>
+</footer>
+<div class="footer"></div>
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<script src="../../js/docs.min.js"></script>
+<script src="../../js/main.js"></script>
+
+<script src="../../js/ie10-viewport-bug-workaround.js"></script>
+
+
+    
+  </body>
+</html>

@@ -1,0 +1,254 @@
+---
+title: 'Project 2: Modeling, Testing, and Predicting'
+author: "SDS348"
+date: ''
+output:
+  html_document:
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+  pdf_document:
+    toc: no
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, fig.align = "center", warning = F, message = F,
+tidy=TRUE, tidy.opts=list(width.cutoff=60), R.options=list(max.print=100))
+```
+
+## Modeling
+
+###Libraries and Functions
+
+```{r}
+library(survival);library(sandwich); library(lmtest); library(dplyr); library(rstatix); library(vegan);library(plotROC);library(glmnet)
+
+## GIVE IT PREDICTED PROBS AND TRUTH LABELS (0/1), RETURNS VARIOUS DIAGNOSTICS
+
+class_diag <- function(probs,truth){
+#CONFUSION MATRIX: CALCULATE ACCURACY, TPR, TNR, PPV
+
+if(is.character(truth)==TRUE) truth<-as.factor(truth)
+if(is.numeric(truth)==FALSE & is.logical(truth)==FALSE) truth<-as.numeric(truth)-1
+
+tab<-table(factor(probs>.5,levels=c("FALSE","TRUE")),factor(truth, levels=c(0,1)))
+acc=sum(diag(tab))/sum(tab)
+sens=tab[2,2]/colSums(tab)[2]
+spec=tab[1,1]/colSums(tab)[1]
+ppv=tab[2,2]/rowSums(tab)[2]
+f1=2*(sens*ppv)/(sens+ppv)
+
+#CALCULATE EXACT AUC
+ord<-order(probs, decreasing=TRUE)
+probs <- probs[ord]; truth <- truth[ord]
+
+TPR=cumsum(truth)/max(1,sum(truth)) 
+FPR=cumsum(!truth)/max(1,sum(!truth))
+
+dup<-c(probs[-1]>=probs[-length(probs)], FALSE)
+TPR<-c(0,TPR[!dup],1); FPR<-c(0,FPR[!dup],1)
+n <- length(TPR)
+auc<- sum( ((TPR[-1]+TPR[-n])/2) * (FPR[-1]-FPR[-n]) )
+
+data.frame(acc,sens,spec,ppv,f1,auc)
+} 
+```
+
+### Finding Data 
+```{r}
+my <- myeloid
+my<-my%>%na.omit()
+head(my)
+```
+#### The dataset Myeloid comes from the package survival. The package survival has many datasets that are about cancers and other serious diseases that humans face. The dataset myeloid is a simulated dataset based on a trial in acute myeloid leukemia. Originally, myeloid has 8 variables with 646 observations. After removing the NA's myeloid contains 8 variables and 126 observations. Of the 8 variables 2 are categorical (trt, sex), one is binary (death), and 5 are numerical (id, futime, txtime, crtime, and rltime). The first variable id is the subject identifier. The second variable trt is a categorical variable, containing the observations A and B. The observation A stands for treatment arm A, likewise, the observation B is for treatment on arm B. The third variable sex is also a categorical variable, f is observed when the patient was female, m is observed when the patient was male. The third variable futime contains data on the patient's time to death or time to last follow-up depending on the binary variable death. The variable death contains the observations 0 and 1, 1 is seen when the patient has died, and 0 is placed for censoring. If a 1 is observed that means futime represents the patient's time to death, if a 0 is observed then futime represents the patient's time to last follow up. The following three variables are all numeric. The variable txtime represents the time to hematopoietic stem cell transplant. The second to last variable crtime represents the time it took to complete the response. The last variable rltime is the time it took to relapse from the disease. 
+
+### MANOVA
+
+```{r}
+man1<-manova(cbind(txtime,rltime,futime)~trt,data=my); summary(man1)
+summary.aov(man1)
+pairwise.t.test(my$txtime,my$trt, p.adj="none")
+pairwise.t.test(my$rltime,my$trt, p.adj="none")
+pairwise.t.test(my$futime,my$trt, p.adj="none")
+1+3+3
+1-(0.95^7)#type 1 error
+0.05/7#bonferroni
+
+#assumptions
+group <- my$trt
+DVs <- my %>% select(txtime,rltime,futime)
+#Test multivariate normality for each group (null: assumption met)
+sapply(split(DVs,group), mshapiro_test)
+
+```
+####A one-way MANOVA was conducted to determine the effect of the treatment arm (A, B) on three dependent variables (txtime, rltime, futime). I conducted 7 hypothesis tests (one MANOVA, 3 ANVOA, and 3 post-hoc t-tests), so the probability of at least one type 1 error if left unadjusted is 1-.95^7= 0.3017. After adjusting the significance level accordingly using Bonferroni correction the significance level changed to a=0.05/7= 0.007. 
+
+####Before adjusting for Bonferroni correction, significant differences were found among the two treatment arms for at least one of the dependent variables, Pillai trace=0.062415, pseudo F(3,132)=2.929, p=0.036. After adjusting there was not a significant difference among the two treatment arms for at least one of the dependent variables. 
+
+####Univariate ANOVAs for each dependent variable were conducted as follow-up tests to the MANOVA, using the Bonferroni method for controlling Type I error rates for multiple comparisons. The univariate ANOVAs for txtime, rltime, and futime were also significant before adjustment, F(1,134)=4.8593, p=0.0292, F(1,134)= 5.7269, p=0.0181, and F(1,134)=5.4587, p=0.0201,respectively. Similar to the MANOVA test after the adjustment the univariate ANOVAs for txtime, rltime, and futime were not significant. 
+
+####Post hoc analysis was performed conducting pairwise comparisons to determine which treatment arm differed in txtime, rltime, and futime. Both arms were found to not differ significantly from each other in terms of txtime, rltime, and futime after adjusting for multiple comparisons (Bonferroni a=0.05/7= 0.007).
+
+####After testing to see if the multivariate normality for each group was met, my p-value was p<0.05, causing me to reject the null hypothesis that all population variances/covariances are equal across groups. This means that the MANOVA assumptions were violated causing there to be some limitations to the MANOVA. 
+
+### Randomization Test
+```{r}
+dists<-my%>%select(c(txtime,rltime,futime))%>%dist()
+adonis(dists~trt, data=my,  method="bray")
+
+SST<- sum(dists^2)/136
+SSW<-my%>%group_by(trt)%>%select(trt, txtime,rltime,futime)%>%
+do(d=dist(.[2:3],"euclidean"))%>%ungroup()%>% summarize(sum(d[[1]]^2)/68+sum(d[[2]]^2)/68)%>%pull 
+F_obs<-((SST-SSW)/1)/(SSW/134)
+# compute null distribution 
+Fs<-replicate(1000,{
+new<-my%>%mutate(trt=sample(trt))
+SSW<-new%>%group_by(trt)%>%select(trt, txtime,rltime,futime)%>%
+do(d=dist(.[2:3],"euclidean"))%>%ungroup()%>%
+summarize(sum(d[[1]]^2)/68 + sum(d[[2]]^2)/68)%>%pull
+((SST-SSW)/1)/(SSW/134)})
+
+hist(Fs,prob = T); abline(v=F_obs, col="red", add=T)
+```
+
+####For the randomization test I preformed a PERMANOVA. Since my data violted the MANOVA assumptions I chose to do a PERMANOVA to see if the threatment arm (A,B) affects txtime, rltime, and futime. 
+
+####H0:For both DVs (arm A, arm B), times for each arm are equal. (There is no difference between treatment arm and time to hematropetic stem cell transplant, complete response, and death/last follow up).
+####HA:For at least one treatment arm (A,B) the times are different. (There is a difference between treatment arm and time to hematropetic stem cell transplant, complete response, and death/last follow up).
+
+#### The p-value of the PERMANOVA is p=0.015, leading us to reject the null hypothesis and accept the alternative hypothesis that there is a difference between treatment arm and time to hematropetic stem cell transplant, complete response, and death/last follow up. 
+
+### Linear Regression Model
+```{r}
+my2<-my
+my2<-my%>%mutate(death=as.character(my$death))
+my2$futime_c <- my$futime - mean(my$futime)#mean centering
+my2$crtime_c <- my$crtime - mean(my$crtime)
+my2$rltime_c <- my$rltime - mean(my$rltime)
+fit<-lm(futime_c~death+rltime_c+sex+trt+crtime_c+death:rltime_c, data=my2);summary(fit)#model
+
+my%>%mutate(death=as.character(my$death))%>%ggplot(aes(x=rltime, y=futime,group=death))+geom_point(aes(color=death))+
+geom_smooth(method="lm",formula=y~1,se=F,fullrange=T,aes(color=death))+xlab("")
+
+resids<-fit$residuals; fitvals<-fit$fitted.values
+ggplot()+geom_point(aes(fitvals,resids))+geom_hline(yintercept=0, col="red")#linearity
+ks.test(resids, "pnorm", mean=0, sd(resids))#normality
+bptest(fit)#homoskedastic
+summary(fit)$coef #uncorrected se
+coeftest(fit, vcov = vcovHC(fit))#corrected se
+```
+#### A linear regression model was used to predict futime from death, crtime,rltime, treatment arm, sex and from the interaction of death and rltime. Before performing the regression I mean-centered the numeric variables involved in the interaction and changed death to a character to see which observation is used. 
+
+#### Intercept: Predicted futime for a female patient who did not die with treatment arm A, and an average rltime and crtime is 682.17.
+#### Death1: Controlling for rltime, sex, treatment arm, and crtime, futime in patients that died is 1022.32 times lower than patients that did not die on average.
+#### rltime_c: Controlling for sex, treatment arm, and death status, for every 1 unit increase in rltime_c, futime goes up by 0.256 on average.
+#### sexm: Controlling for death status and treatment arm, in patients with average rltime and crtime, futime is 26.03 lower for males compared to females.
+#### trtB: Controlling for death status and sex, in patients with average rltime and crtime, futime is 66.05 higher for treatment arm A compared to treatment arm B. 
+#### crtime_c: Controlling for sex, treatment arm, and death status, for every 1 unit increase in crtime, futime goes up by 0.70 on average.
+#### death1:rltime_c: Controlling for sex,treatment arm, and crtime, the slope for rltime on futime is 1.14 higher for people who died compared to patients who are still alvie. 
+#### After finding the coefficient estimates I plotted the regression of the interaction. I once again made death a character so that the legend is two distinct colors and not a gradient. I then checked the assumption of linearity by plotting residuals by fitted values. I then found normality by using a  Kolmogorov-Smirnov test and finally found homoskedasticity by the Breusch-Pagan test. On the normality graph, the data was clumped into two groups, showing that the data is non-normal. The linearity test showed that the data passes the linearity assumption. The last test, the test for homoskedasticity showed that the data is Heteroskedastic. Overall, two out of the three assumptions were violated. 
+```{r}
+fit<-lm(futime_c~death+rltime_c+sex+trt+crtime_c+death:rltime_c, data=my2);summary(fit)#model
+#resampling observations
+samp_distn<-replicate(5000, {
+boot_dat<-boot_dat<-my2[sample(nrow(my2),replace=TRUE),]
+fit<-lm(futime_c~death+rltime_c+sex+trt+crtime_c+death:rltime_c, data=boot_dat)
+coef(fit)
+})
+coeftest(fit)#normal Se
+coeftest(fit, vcov = vcovHC(fit, type="HC1"))#robust Se HC1 because orignal type made std error NAN
+samp_distn%>%t%>%as.data.frame%>%summarize_all(sd)#boot strapped 
+
+
+```
+#### I then reran the same regression model but this time I bootstrapped the standard errors by resampling observations. After resampling my regression model there are no changes between the original SEs and the resampled SEs. Unlike the resampled SEs, the robust and bootstrapped SEs did change. Of the robust SEs, sexm, trtB, and crtime_c decreased and the rest of the SEs increased. Of the bootstrapped SEs all but sex and trtB increased. The robust SEs and bootstrapped SEs increase and decreased by less than a 0.5 difference. The p-values from the original, resampled, and robust models were all similar with very slight changes. The significant interactions still stayed significant (intercept, death1, and death1:rltime_c), and the non-significant interactions still stayed non-significant (rltime_c, sexm, trtB, and crtime_c).
+
+### Logistic Regression Model
+```{r}
+fit<-glm(death~rltime+futime, data=my,family=binomial(link="logit"))
+summary(fit)
+exp(coef(fit))
+probs<-predict(fit,type="response") 
+table(predict=as.numeric(probs>.5),truth=my$death)%>%addmargins()#confusion matrix
+
+(42+85)/136 #accuracy
+ 85/89#TPR
+ 42/47#TNR
+ 85/90#PPV
+ 
+my2$logit<-predict(fit,type="link")
+my2%>%mutate(death=as.character(my$death))%>%ggplot()+geom_density(aes(logit,color=death,fill=death), alpha=.4)+
+  theme(legend.position=c(.85,.85))+geom_vline(xintercept=0)+xlab("logit (log-odds)")+
+  geom_rug(aes(logit,color=death))#density plot
+
+ROCplot<-ggplot(my)+geom_roc(aes(d=death,m=probs), n.cuts=0)
+ROCplot
+calc_auc(ROCplot)#AUC
+```
+#### For my logistic regression model I used death as my binary variable; rltime and futime were used as the two explanatory variables. 
+#### Intercept: Odds of death for rltime=0, futime=0 is 203.96.
+#### rltime: Controlling for futime, for every one unit increase of rltime, odds of death increase by 1.00 (non-significant).
+#### futime: Controlling for rltime, for every one-unit increase in futime, odds of death increase by 0.995 (significant).
+#### From the confusion matrix of my logistic regression I was able to compute the accuracy, sensitivity, specificity, and precision of the model. The accuracy of the logistic model is 9.93, sensitivity=0.995, specificity=0.894, and precision equals 0.944. The AUC was calculated by using the calc_auc function. The AUC of the model is reported to be 0.95 and is considered a great AUC. 
+```{r}
+fit<-glm(death~., data=my,family=binomial(link="logit"));summary(fit)
+probs<-predict(fit,type="response") 
+table(predict=as.numeric(probs>.5),truth=my$death)%>%addmargins()#confusion matrix
+(41+83)/136 #accuracy
+83/89#TPR
+41/47#TNR
+83/89#PPV
+ROCplot<-ggplot(my)+geom_roc(aes(d=death,m=probs), n.cuts=0);calc_auc(ROCplot)#AUC
+```
+#### For the final part of the project I performed a logistic regression between death and id, trt, sex, futime, txtime, crtime, and rltime. I then created a confusion matrix to calculate the in sample classification diagnostics: Accuracy=0.91, Sensitivity=0.93, Specificity=0.87, Precision=0.9, and AUC=0.96. As the AUC was greater than 0.9 it is considered a great AUC.  
+```{r}
+#10fold
+k=10 
+data<-my[sample(nrow(my)),] #randomly order rows
+folds<-cut(seq(1:nrow(my)),breaks=k,labels=F) #create folds
+diags<-NULL
+for(i in 1:k){
+## create training and test sets
+train<-data[folds!=i,]
+test<-data[folds==i,]
+truth<-test$death 
+fit2<-glm(death~., data=train,family=binomial)
+probs<-predict(fit2,newdata = test,type="response")
+diags<-rbind(diags,class_diag(probs,truth))
+}
+summarize_all(diags,mean)
+```
+#### I then performed a 10-fold CV on the model. The average out of sample classification for the 10 fold CV are as follows: Accuracy=0.89, Sensitivity=0.908, Specificity=0.866, Precision= 0.918, and AUC= 0.93, respectively. The AUC in the 10-fold CV dropped by 0.03. It is still considered a great AUC.
+```{r}
+#lassso
+y<-as.matrix(my$death) #response
+x<-model.matrix(death~.,data=my)[,-1] #predictors
+cv<-cv.glmnet(x,y,family="binomial")
+lasso<-glmnet(x,y,family="binomial",lambda=cv$lambda.1se)
+coef(lasso)
+```
+#### A lasso regression was then performed on the same model as before. Out of the seven variables, only futime was retained, showing that it the most important predictor of death in the model/myeloid dataset.  This retainment makes a lot of sense because death and futime are contingent on each other. 
+```{r}
+#10fold lasso
+k=10
+data <- my %>% sample_frac #rows in random order
+folds <- ntile(1:nrow(data),n=10) #fold labels
+diags<-NULL
+for(i in 1:k){
+train <- data[folds!=i,] 
+test <- data[folds==i,] 
+truth <- test$death
+fit <- glm(death~futime,
+data=train, family="binomial")
+probs <- predict(fit, newdata=test, type="response")
+diags<-rbind(diags,class_diag(probs,truth))
+}
+diags%>%summarize_all(mean)
+```
+#### For the final part of this logistic regression model, a 10-fold CV was performed on the lasso regression. This model only contained futime as it was the only variable that was retained during the lasso regression. The model out of sample AUC is 0.963. The 10-fold lasso AUC is also considered a great AUC just like the original models AUC and the 10-fold AUC. Out of the three, the 10-fold lasso has the highest AUC (0.963), followed by the originals(0.961), and the 10-fold CV(0.93). 
+...
+
+
+
+

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Projects on Victoria de la Garza</title>
+    <link>/project/</link>
+    <description>Recent content in Projects on Victoria de la Garza</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-US</language><atom:link href="/project/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Project 1: Exploratory Data Analysis</title>
+      <link>/project/project1/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/project/project1/</guid>
+      <description>Data Wrangling and Data Exploration Introduction When first hearing about this project, I knew that I would want to work with a dataset that contained either genes, diseases, or chromosomes. These three topics are some of my favorite topics in Biology so I knew that incorporating them into my project would make it a lot more interesting for me. When looking for datasets I found many that dealt with genes and chromosomes but, I felt that diseases are much more relevant to the current problems within the world.</description>
+    </item>
+    
+    <item>
+      <title>Project 2: Modeling, Testing, and Predicting</title>
+      <link>/project/project2/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/project/project2/</guid>
+      <description>Modeling Libraries and Functions library(survival) library(sandwich) library(lmtest) library(dplyr) library(rstatix) library(vegan) library(plotROC) library(glmnet) ## GIVE IT PREDICTED PROBS AND TRUTH LABELS (0/1), RETURNS ## VARIOUS DIAGNOSTICS class_diag &amp;lt;- function(probs, truth) { # CONFUSION MATRIX: CALCULATE ACCURACY, TPR, TNR, PPV if (is.character(truth) == TRUE) truth &amp;lt;- as.factor(truth) if (is.numeric(truth) == FALSE &amp;amp; is.logical(truth) == FALSE) truth &amp;lt;- as.numeric(truth) - 1 tab &amp;lt;- table(factor(probs &amp;gt; 0.5, levels = c(&amp;quot;FALSE&amp;quot;, &amp;quot;TRUE&amp;quot;)), factor(truth, levels = c(0, 1))) acc = sum(diag(tab))/sum(tab) sens = tab[2, 2]/colSums(tab)[2] spec = tab[1, 1]/colSums(tab)[1] ppv = tab[2, 2]/rowSums(tab)[2] f1 = 2 * (sens * ppv)/(sens + ppv) # CALCULATE EXACT AUC ord &amp;lt;- order(probs, decreasing = TRUE) probs &amp;lt;- probs[ord] truth &amp;lt;- truth[ord] TPR = cumsum(truth)/max(1, sum(truth)) FPR = cumsum(!</description>
+    </item>
+    
+  </channel>
+</rss>

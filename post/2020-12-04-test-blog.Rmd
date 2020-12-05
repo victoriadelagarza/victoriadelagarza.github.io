@@ -1,0 +1,24 @@
+---
+title: Test blog
+author: 'Victoria'
+date: '2020-12-04'
+slug: test-blog
+categories: []
+tags: []
+description: ''
+---
+
+[Link to project 1](/projects/project1/)
+[Link to my dogs Instagram] (https://www.instagram.com/theo.theminiaussie/)
+
+```{r}
+#try
+```
+
+```{python}
+#test
+```
+
+This is theo he is an mini aussie and is 3 years old. I bought him my first year at UT when I was still living in the dorms. He is a little spoiled but still very cute.
+
+![](/post/2020-12-04-test-blog_files/theo.jpg){width=200px height=200px}
