@@ -1,0 +1,9 @@
+---
+title: Using R and Python Together
+author: ''
+date: '2020-12-10'
+slug: using-r-and-python-together
+categories: []
+tags: []
+description: ''
+---
