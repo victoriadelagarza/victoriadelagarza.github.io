@@ -39,15 +39,15 @@ print(Life,r.Theo,With)
 
 #### Theo over the years
 
-<div style="text-align:left"> ![Theo at 3 months](/post/2020-12-10-using-r-and-python-together_files/IMG-1699.JPG){width=200px height=200px } </div>
+<div style="text-align:left"> ![Theo at 3 months](/post/2020-12-10-using-r-and-python-together_files/IMG-1699.JPG){width=250px height=250px } </div>
 
 
 
-<div style="text-align:center"> ![Theo at 1 year](/post/2020-12-10-using-r-and-python-together_files/IMG-0861.jpg){width=200px height=200px} </div>
+<div style="text-align:center"> ![Theo at 1 year](/post/2020-12-10-using-r-and-python-together_files/IMG-0861.jpg){width=250px height=250px} </div>
 
 
 
-<div style="text-align: right"> ![Theo at 2 years](/post/2020-12-10-using-r-and-python-together_files/C503B10A-3F91-4E9A-97D5-20E03A7CA94E.JPG){width=200px height=200px } </div>
+<div style="text-align: right"> ![Theo at 2 years](/post/2020-12-10-using-r-and-python-together_files/C503B10A-3F91-4E9A-97D5-20E03A7CA94E.JPG){width=250px height=250px } </div>
 
 See, it was worth staying around.
 
