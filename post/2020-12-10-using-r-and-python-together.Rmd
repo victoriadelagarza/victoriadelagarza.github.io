@@ -1,9 +1,43 @@
 ---
-title: Using R and Python Together
+title: "Using R and Python Together"
 author: ''
 date: '2020-12-10'
-slug: using-r-and-python-together
-categories: []
-tags: []
 description: ''
+slug: using-r-and-python-together
+tags: []
+categories: []
 ---
+ 
+  $\color{#f2aad8}{\text{Why use both?}}$
+
+Have you ever wanted to use both R and python simultaneously?
+
+Have you every forgotten how to do something in R but could remember how to do it in python?
+
+If you answered yes to either question I have the perfect package for you!! If you answered no to both just keep reading, it will be worth your time.
+
+  $\color{#f2aad8}{\text{What is this mystery package?}}$
+
+So, you might be asking yourself what is this magical package that you are talking about. Well, it is called reticulate. It allows you to call into Python from R, it also converts R data types into their equivalent Python types, and converts the Python types back into R types when called on in R. Basically, reticulate allows for you to play in Python while using R. 
+
+  $\color{#f2aad8}{\text{Example}}$
+
+When I am writing this it is the holiday season. My family has taken home 2 out of the three of our dogs during this season. I am the owner of one of those dogs. You've seen him on my home page and at the bottom of this page. His name is Theo, and it has been 3 years and 8 days since I drove 4 hours to pick him up.
+
+
+```{r}
+library(reticulate)
+Theo<-  round(100-(((1168-1103)/1168)*100),3)
+```
+
+
+```{python}
+Life= "I have had Theo for"
+With= "percent of his life"
+print(Life,r.Theo,With)
+```
+
+ $\color{#f2aad8}{\text{Theo over the years}}$
+ See, it was worth staying around. 
+ 
+![](/img/theo1.jpg) 
