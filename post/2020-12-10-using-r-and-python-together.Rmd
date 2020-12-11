@@ -39,9 +39,6 @@ print(Life,r.Theo,With)
 
 #### Theo over the years
 
-See, it was worth staying around.
-
-
 <div style="text-align:left"> ![Theo at 3 months](/post/2020-12-10-using-r-and-python-together_files/IMG-1699.JPG){width=200px height=200px } </div>
 
 
@@ -51,4 +48,6 @@ See, it was worth staying around.
 
 
 <div style="text-align: right"> ![Theo at 2 years](/post/2020-12-10-using-r-and-python-together_files/C503B10A-3F91-4E9A-97D5-20E03A7CA94E.JPG){width=200px height=200px } </div>
+
+See, it was worth staying around.
 
