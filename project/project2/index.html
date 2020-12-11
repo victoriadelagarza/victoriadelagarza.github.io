@@ -60,7 +60,7 @@
  
 <div class="blog-title">
           <h4>
-         January 1, 0001 
+         November 25, 2020 
             &nbsp;&nbsp;
             
           </h4>
@@ -244,7 +244,7 @@ adonis(dists ~ trt, data = my, method = &quot;bray&quot;)</code></pre>
 ## Terms added sequentially (first to last)
 ## 
 ##            Df SumsOfSqs MeanSqs F.Model      R2 Pr(&gt;F)  
-## trt         1   3082116 3082116  5.4278 0.03893  0.018 *
+## trt         1   3082116 3082116  5.4278 0.03893  0.016 *
 ## Residuals 134  76090225  567838         0.96107         
 ## Total     135  79172342                 1.00000         
 ## ---
@@ -450,7 +450,7 @@ coeftest(fit)  #normal Se</code></pre>
 ## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1</code></pre>
 <pre class="r"><code>samp_distn %&gt;% t %&gt;% as.data.frame %&gt;% summarize_all(sd)  #boot strapped </code></pre>
 <pre><code>##   (Intercept)   death1  rltime_c     sexm     trtB  crtime_c death1:rltime_c
-## 1    82.49262 82.49826 0.1917552 61.08526 58.34346 0.9633281       0.2759022</code></pre>
+## 1    82.84762 82.97801 0.1875692 61.50685 60.37654 0.9325388       0.2726376</code></pre>
 </div>
 <div id="i-then-reran-the-same-regression-model-but-this-time-i-bootstrapped-the-standard-errors-by-resampling-observations.-after-resampling-my-regression-model-there-are-no-changes-between-the-original-ses-and-the-resampled-ses.-unlike-the-resampled-ses-the-robust-and-bootstrapped-ses-did-change.-of-the-robust-ses-sexm-trtb-and-crtime_c-decreased-and-the-rest-of-the-ses-increased.-of-the-bootstrapped-ses-all-but-sex-and-trtb-increased.-the-robust-ses-and-bootstrapped-ses-increase-and-decreased-by-less-than-a-0.5-difference.-the-p-values-from-the-original-resampled-and-robust-models-were-all-similar-with-very-slight-changes.-the-significant-interactions-still-stayed-significant-intercept-death1-and-death1rltime_c-and-the-non-significant-interactions-still-stayed-non-significant-rltime_c-sexm-trtb-and-crtime_c." class="section level4">
 <h4>I then reran the same regression model but this time I bootstrapped the standard errors by resampling observations. After resampling my regression model there are no changes between the original SEs and the resampled SEs. Unlike the resampled SEs, the robust and bootstrapped SEs did change. Of the robust SEs, sexm, trtB, and crtime_c decreased and the rest of the SEs increased. Of the bootstrapped SEs all but sex and trtB increased. The robust SEs and bootstrapped SEs increase and decreased by less than a 0.5 difference. The p-values from the original, resampled, and robust models were all similar with very slight changes. The significant interactions still stayed significant (intercept, death1, and death1:rltime_c), and the non-significant interactions still stayed non-significant (rltime_c, sexm, trtB, and crtime_c).</h4>
@@ -597,8 +597,8 @@ for (i in 1:k) {
     diags &lt;- rbind(diags, class_diag(probs, truth))
 }
 summarize_all(diags, mean)</code></pre>
-<pre><code>##         acc      sens      spec       ppv       f1       auc
-## 1 0.8978022 0.9201587 0.8457143 0.9225397 0.918094 0.8868481</code></pre>
+<pre><code>##         acc      sens      spec       ppv        f1       auc
+## 1 0.8961538 0.9238889 0.8540476 0.9252273 0.9214327 0.9365703</code></pre>
 </div>
 <div id="i-then-performed-a-10-fold-cv-on-the-model.-the-average-out-of-sample-classification-for-the-10-fold-cv-are-as-follows-accuracy0.89-sensitivity0.908-specificity0.866-precision-0.918-and-auc-0.93-respectively.-the-auc-in-the-10-fold-cv-dropped-by-0.03.-it-is-still-considered-a-great-auc." class="section level4">
 <h4>I then performed a 10-fold CV on the model. The average out of sample classification for the 10 fold CV are as follows: Accuracy=0.89, Sensitivity=0.908, Specificity=0.866, Precision= 0.918, and AUC= 0.93, respectively. The AUC in the 10-fold CV dropped by 0.03. It is still considered a great AUC.</h4>
@@ -610,11 +610,11 @@ lasso &lt;- glmnet(x, y, family = &quot;binomial&quot;, lambda = cv$lambda.1se)
 coef(lasso)</code></pre>
 <pre><code>## 8 x 1 sparse Matrix of class &quot;dgCMatrix&quot;
 ##                       s0
-## (Intercept)  2.865982835
+## (Intercept)  2.584139188
 ## id           .          
 ## trtB         .          
 ## sexm         .          
-## futime      -0.002034636
+## futime      -0.001787569
 ## txtime       .          
 ## crtime       .          
 ## rltime       .</code></pre>
@@ -635,8 +635,8 @@ for (i in 1:k) {
     diags &lt;- rbind(diags, class_diag(probs, truth))
 }
 diags %&gt;% summarize_all(mean)</code></pre>
-<pre><code>##         acc      sens      spec      ppv        f1       auc
-## 1 0.9258242 0.9484091 0.8891667 0.942298 0.9422808 0.9619697</code></pre>
+<pre><code>##        acc      sens  spec       ppv        f1       auc
+## 1 0.928022 0.9377778 0.915 0.9618182 0.9440635 0.9388889</code></pre>
 </div>
 <div id="for-the-final-part-of-this-logistic-regression-model-a-10-fold-cv-was-performed-on-the-lasso-regression.-this-model-only-contained-futime-as-it-was-the-only-variable-that-was-retained-during-the-lasso-regression.-the-model-out-of-sample-auc-is-0.963.-the-10-fold-lasso-auc-is-also-considered-a-great-auc-just-like-the-original-models-auc-and-the-10-fold-auc.-out-of-the-three-the-10-fold-lasso-has-the-highest-auc-0.963-followed-by-the-originals0.961-and-the-10-fold-cv0.93." class="section level4">
 <h4>For the final part of this logistic regression model, a 10-fold CV was performed on the lasso regression. This model only contained futime as it was the only variable that was retained during the lasso regression. The model out of sample AUC is 0.963. The 10-fold lasso AUC is also considered a great AUC just like the original models AUC and the 10-fold AUC. Out of the three, the 10-fold lasso has the highest AUC (0.963), followed by the originals(0.961), and the 10-fold CV(0.93).</h4>
